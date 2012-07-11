@@ -2,6 +2,7 @@ use strict;
 use utf8;
 use vars qw($VERSION %IRSSI);
 use Irssi qw(command_bind signal_add servers timeout_add);
+use Irssi::TextUI;
 use LWP::Simple;
 use Text::ParseWords;
 use DateTime;
