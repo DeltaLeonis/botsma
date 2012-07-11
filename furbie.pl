@@ -742,7 +742,7 @@ sub citycoords
 		return "";
 	}
 
-	open(F, '/home/jorrit/.irssi/scripts/nl.txt')
+	open(F, '.irssi/scripts/nl.txt')
 		or die("Couldn't open nl.txt");
 
 	while($line = <F>)
@@ -767,7 +767,7 @@ sub citycoords
 
 sub bofh
 {
-	open(F, '/home/jorrit/.irssi/scripts/excuses') ||
+	open(F, '.irssi/scripts/excuses') ||
 		return 'Kon de excuse-file niet openen. Ironisch!';
 	#
 	## (c) 1994-2000 Jeff Ballard.
