@@ -903,14 +903,15 @@ sub regen
 
 			# The rain intensity takes values from 000 to 255. The rain in
 			# millimeters per hour is calculated with the formula
-			# 10^((waarde -109)/32).
+			# 10 ^ ((waarde - 109) / 32).
 			#
-			# The range it gives, 0-36517, is not really useful, as the rain
-			# intensity will rarely be more than 30 mm/h.
+			# The range this formula gives, 0-36517, is not really useful, as
+			# the rain intensity will rarely be more than 30 mm/h. Still, even
+			# that is quite much: experience showed 6 mm/h is a good maximum.
 			#
 			# What we'll do is: calculate the rain intensity using the above
-			# formula, then split the 30mm up in 8 buckets of 3.75mm each.
-			# Everything more than 30mm/h will get a red '!'
+			# formula, then split the 6 mm up in 8 buckets of 0.75 mm each.
+			# Everything more than 6 mm/h will get a red '!'
 			if ($rain == 0)
 			{
 				$prediction .= ' ';
@@ -919,13 +920,13 @@ sub regen
 			{
 				$mm = 10 ** (($rain - 109) / 32);
 
-				if ($mm > 30)
+				if ($mm > 6)
 				{
 					$prediction .= join('', chr(03), '04!', chr(03));
 				}
 				else
 				{
-					$bucket = floor(($mm * 8) / 30);
+					$bucket = floor(($mm * 8) / 6);
 					$prediction .= $rainbox[$bucket];
 				}
 			}
