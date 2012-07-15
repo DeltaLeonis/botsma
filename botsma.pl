@@ -14,6 +14,8 @@ use DateTime::Format::Strptime;
 # Needed for floor().
 use POSIX;
 
+use Botsma::Common;
+
 $VERSION = '0.5';
 %IRSSI =
 (

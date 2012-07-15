@@ -43,6 +43,7 @@ sub temp
 
 		return 'Plaatsnaam niet gevonden... waarschijnlijk heeft akaIDIOT het gebombardeerd.';
 	}
+}
 
 sub stand
 {
@@ -362,3 +363,5 @@ sub smoes
 	return sprintf('%s omdat %s.', $wat[rand(scalar(@wat))],
 		           $waarom[rand(scalar(@waarom))]);
 }
+
+1;
