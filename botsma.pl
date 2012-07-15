@@ -376,7 +376,6 @@ sub tempaka
 	}
 }
 
-
 # Get a Bastard Operator From Hell excuse.
 #
 # Returns:
@@ -391,9 +390,8 @@ sub bofh
 	# No need to call srand anymore.
 	# srand(time);
 
-	return $excuse[rand(scalar($excuse))];
+	return $excuse[rand(scalar(@excuse))];
 }
-
 
 signal_add("message public", "command");
 signal_add("message private", "owncommand");
