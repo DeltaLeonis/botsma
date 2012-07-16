@@ -10,9 +10,6 @@ use LWP::Simple;
 use DateTime;
 use DateTime::Format::Strptime;
 
-# Needed for floor().
-use POSIX;
-
 use Botsma::Common;
 
 use warnings;
@@ -189,13 +186,16 @@ sub command
 		}
 	}
 
-	# Send the reply to the target (channel/nick).
-	foreach $part (split(/\\n/, $reply))
+	# Send the reply to the target (channel/nick), if it exists.
+	if ($reply)
 	{
-		# Ugly way to sleep half a second
-		# select(undef, undef, undef, 0.5);
-		$server->command('msg '.$target.' '.$part);
-		$server->command('wait 50');
+		foreach $part (split(/\\n/, $reply))
+		{
+			# Ugly way to sleep half a second
+			# select(undef, undef, undef, 0.5);
+			$server->command('msg '.$target.' '.$part);
+			$server->command('wait 50');
+		}
 	}
 }
 
@@ -276,6 +276,11 @@ sub p2000
 		$part, $dt
 	);
 
+	# Add mIRC-colours: Brandweer in red, Politie in blue, Ambulance in green.
+	$brandweer = chr(03).'04Brandweer'.chr(03);
+	$politie = chr(03).'12Politie'.chr(03);
+	$ambulance = chr(03).'09Ambulance'.chr(03);
+
 	my @streets = 
 	(
 		'universiteit', 'calslaan', 'campuslaan',
@@ -289,7 +294,7 @@ sub p2000
 		'van heeksbleeklaan', 'viermarkenweg', 'zomerdijksweg',
 	);
 
-	my $url = get 'http://www.p2000-online.net/p2000.php?Brandweer=1&Ambulance=1&Politie=1&Twente=1&AutoRefresh=uit';
+	$url = get 'http://www.p2000-online.net/p2000.php?Brandweer=1&Ambulance=1&Politie=1&Twente=1&AutoRefresh=uit';
 
 	# This is not fast ;-)
 	foreach (@streets)
@@ -311,26 +316,26 @@ sub p2000
 			    DateTime->compare($Strp->parse_datetime("$1 $2"), $lasttime) == 1)
 			{
 				$msg = $msg.$2.' '.$3.' '.$4.'\n';
+
+				# Add the colours.
+				$msg =~ s/Brandweer/$brandweer/g;
+				$msg =~ s/Politie/$politie/g;
+				$msg =~ s/Ambulance/$ambulance/g;
+
 				$lasttime = $Strp->parse_datetime("$1 $2");
 			}
 		}
 	}
 
-	# Add mIRC-colours: Brandweer in red, Politie in blue, Ambulance in green.
-	$brandweer = chr(03).'04Brandweer'.chr(03);
-	$politie = chr(03).'12Politie'.chr(03);
-	$ambulance = chr(03).'09Ambulance'.chr(03);
-
-	$msg =~ s/Brandweer/$brandweer/g;
-	$msg =~ s/Politie/$politie/g;
-	$msg =~ s/Ambulance/$ambulance/g;
-
-	# Send the annoucement to #inter-actief on IRCnet.
-	$server = Irssi::server_find_tag('IRCnet');
-	
-	foreach $part (split(/\\n/, $msg))
+	if ($msg)
 	{
-		$server->command('msg #inter-actief '.$part);
+		# Send the annoucement to #inter-actief on IRCnet.
+		$server = Irssi::server_find_tag('IRCnet');
+		
+		foreach $part (split(/\\n/, $msg))
+		{
+			$server->command('msg #inter-actief '.$part);
+		}
 	}
 }
 
