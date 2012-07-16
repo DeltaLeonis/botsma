@@ -6,7 +6,6 @@ use Irssi qw(signal_add timeout_add);
 use Irssi::TextUI;
 
 use LWP::Simple;
-use Text::ParseWords;
 
 use DateTime;
 use DateTime::Format::Strptime;
@@ -15,6 +14,8 @@ use DateTime::Format::Strptime;
 use POSIX;
 
 use Botsma::Common;
+
+use warnings;
 
 $VERSION = '0.5';
 %IRSSI =
@@ -79,8 +80,8 @@ sub command
 	my ($server, $msg, $nick, $address, $target) = @_;
 	my
 	(
-		$reply, $part, $cmd, $params, $mynick, $pattern, $replace, $flags,
-		$corrNick, $substWindow, $lines, $original, $substitution
+		$reply, $part, $cmd, $cmdref, $params, $mynick, $pattern, $replace,
+		$flags, $corrNick, $substWindow, $lines, $original, $substitution
 	);
 
 	$mynick = $server->{nick};
@@ -101,8 +102,13 @@ sub command
 		# making use of the can() UNIVERSAL function.
 		eval
 		{
-			$reply = Irssi::Script::botsma->can($cmd)->
-				($server, $params, $nick, $address, $target);
+			# Use the subroutine with name $cmd from either our own package
+			# or from Botsma::Common.
+			if ($cmdref = __PACKAGE__->can($cmd) or
+			    $cmdref = Botsma::Common->can($cmd))
+			{
+				$reply = $cmdref->($server, $params, $nick, $address, $target);
+			}
 			# Ehm... &($cmd) works too?
 		};
 		if ($@)
