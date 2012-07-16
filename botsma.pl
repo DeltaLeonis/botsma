@@ -22,8 +22,8 @@ $VERSION = '0.5';
 	name => 'Furbie Imposter',
 	description => 'Started out as a cheap alternative for some Furbie ' .
 	               'commands which were blatantly stolen from ' .
-				   'http://furbie.net/source/ ... ' .
-				   'Over time new and original commands were added.',
+                   'http://furbie.net/source/ ... ' .
+                   'Over time new and original commands were added.',
 	license => 'GPL',
 );
 
