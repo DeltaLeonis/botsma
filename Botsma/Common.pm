@@ -3,23 +3,43 @@ package Botsma::Common;
 use strict;
 use utf8;
 
+use LWP::Simple;
+use Text::ParseWords;
+
+# Needed for floor().
+use POSIX;
+
+# All subroutines have a common set of parameters. Often, things like $server
+# or $address are ignored, but because the calls to the subroutines will be
+# automatically made from IRC we use the same set of parameters in every
+# subroutine.
+
+# Retrieve the temperature of/from a KNMI weather station.
+#
+# Parameters:
+# $server Ignored.
+# $params The name of the weather station which can be found at
+#         http://www.knmi.nl/actueel/
+# $nick The nickname that called this command.
+# $address Ignored.
+# $target Also the nickname that called this command?
 sub temp
 {
 	my ($server, $params, $nick, $address, $target) = @_;
 	my ($url, $city, @params);
 
-	#print 'Target = '.$target;
-	#print 'Nick = '.$nick;
+	print 'Target = '.$target;
+	print 'Nick = '.$nick;
 
 	# UGLY FIX ETC PANIC BBQ!
-	if ((lc $nick eq 'dtm') or (lc $target eq 'dtm'))
-	{
-		return tempdtm();
-	}
-	elsif ((lc $nick eq 'akaidiot') or (lc $target eq 'akaidiot'))
-	{
-		return tempaka();
-	}
+	#if ((lc $nick eq 'dtm') or (lc $target eq 'dtm'))
+	#{
+	#	return tempdtm();
+	#}
+	#elsif ((lc $nick eq 'akaidiot') or (lc $target eq 'akaidiot'))
+	#{
+	#	return tempaka();
+	#}
 
 	#@params = split(/\s+/, $params);
 
@@ -36,15 +56,18 @@ sub temp
 	}
 	else
 	{
-		return sprintf('%s %s, %s, anders zoek je eerst even een meetstation op http://www.knmi.nl/actueel/',
-					   aanhef(),
-					   $nick,
-					   scheldwoord());
-
-		return 'Plaatsnaam niet gevonden... waarschijnlijk heeft akaIDIOT het gebombardeerd.';
+		return sprintf('%s %s, %s, anders zoek je eerst even een meetstation' .
+			           'op http://www.knmi.nl/actueel/',
+					   aanhef(), $nick, scheldwoord());
 	}
 }
 
+# Report the scores of today's football (soccer!) matches.
+#
+# Returns:
+# A multiline string with either a string with the scores of currently live
+# matches, separated by a literal '\n'.  Or, if no matches are currently live,
+# return a string with the upcoming matches.
 sub stand
 {
 	my $url = get 'http://vi.globalsportsmedia.com/vi.html';
@@ -73,6 +96,10 @@ sub stand
 	return $result;
 }
 
+# Get a salutation.
+#
+# Returns:
+# A random salutation, for example 'Hey'.
 sub aanhef
 {
 	my @aanhef = ('Zeg', 'Hey', 'Geachte', 'Tering', 'Hallo', 'Dag');
@@ -80,6 +107,10 @@ sub aanhef
 	return $aanhef[rand(scalar(@aanhef))];
 }
 
+# Return an insult.
+#
+# Returns:
+# A random insult.
 sub scheldwoord
 {
 	my @scheldwoord =
@@ -114,11 +145,18 @@ sub scheldwoord
 	return $scheldwoord[rand(scalar(@scheldwoord))];
 }
 
+# Coin tosser (say yes or no)
+#
+# Returns:
+# Randomly either 'Ja.' or 'Nee.'
 sub janee
 {
 	return ((rand) < 0.5) ? 'Ja.' : 'Nee.';
 }
 
+# Like some other subroutines, taken directly from Furbie (http://furbie.net/).
+#
+# Laat Furbie Turks/Marokkaans-Nederlands praten.
 sub ali
 {
 	my ($server, $params, $nick, $address, $target) = @_;
@@ -147,6 +185,18 @@ sub ali
 	return $reply;
 }
 
+# Get a METAR for an airport with a certain ICAO code.
+#
+# Parameters:
+# $server Ignored.
+# $params The ICAO code of the aiport you want to get the METAR from.
+# $nick Ignored.
+# $address Ignored.
+# $target Ignored.
+#
+# Returns:
+# A string with the METAR report, or a 'No METAR for' plus the $params if the
+# METAR couldn't be found.
 sub metar
 {
 	my ($server, $params, $nick, $address, $target) = @_;
@@ -173,7 +223,11 @@ sub metar
 # Example: kies "Clean the Room" sleep "Play Guitar" run
 #
 # Parameters: 
+# $server Ignored.
 # $params The options to choose from.
+# $nick Ignored.
+# $address Ignored.
+# $target Ignored.
 #
 # Returns:
 # One of the words from $params.
@@ -184,32 +238,46 @@ sub kies
 	return $words[rand($#words+1)];
 }
 
+# Get the GPS coordinates of a city in The Netherlands.
+#
+# Parameters:
+# $server Ignored.
+# $params The name of the city.
+# $nick Ignored.
+# $address Ignored.
+# $target Ignored.
+# 
+# Returns:
+# Latitude and longtitude, separated by a space.
+# Empty string if no city was specified.
+# String with an error message if the database file couldn't be opened.
 sub citycoords
 {
 	my ($server, $params, $nick, $address, $target) = @_;
-	my $line;
-	my $full_name_ro;
-	my @splitline;
 
-	print($params);
+	my ($line, $full_name_ro, @splitline);
 
-	if ($params eq "")
+	if ($params eq '')
 	{
-		return "";
+		return '';
 	}
 
-	open(F, '.irssi/scripts/nl.txt')
-		or die("Couldn't open nl.txt");
+	open(F, '.irssi/scripts/nl.txt') or
+		return "Couldn't open the coordinate database";
 
-	while($line = <F>)
+	while ($line = <F>)
 	{
+		# Line was found but it could be a municipality instead of the city.
 		if ($line =~ m/\Q$params\E/i)
 		{
 			@splitline = split("\t", $line);
 
-			print($splitline[23]);
-			
-			# Field 24 is FULL_NAME_RO
+			# There is a problem for places with the same name, for example
+			# Hengelo (OV) and Hengelo (GLD). Right now this subroutine just
+			# finds the first match, but a neater solution would be nice.
+
+			# Field 24 is FULL_NAME_RO.
+			# Field 4 and 5 are the latitude and longitude.
 			if ((lc $params) eq (lc $splitline[23]))
 			{
 				return join(" ", $splitline[3], $splitline[4]);
@@ -218,7 +286,6 @@ sub citycoords
 	}
 
 	return 'Dat gehucht kan niet worden gevonden';
-
 }
 
 # Get an 'ASCII art' graph of the expected rain in a certain Dutch city.
@@ -244,7 +311,7 @@ sub regen
 	my ($server, $params, $nick, $address, $target) = @_;
 	my @rainbox = ("▁", "▂", "▃", "▄", "▅", "▆", "▇", "█");
 
-	if ($params eq "")
+	if ($params eq '')
 	{
 		$params = 'Enschede';
 	}
@@ -321,6 +388,10 @@ sub regen
 	return join('', $prediction, ' (', $params, ' ', $lat, ' ', $lon, ')');
 }
 
+# Return an excuse.
+#
+# Returns:
+# A random excuse/smoes.
 sub smoes
 {
 	my @wat = ("Ik kan nu niet langer blijven"
