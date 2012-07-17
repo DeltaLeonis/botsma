@@ -60,6 +60,11 @@ my %users =
 		wstation => 'De Bilt',
 		location => 'Bussum'
 	},
+	# Zosma =>
+	# {
+	# 	wstation => 'Den Helder',
+	# 	location => 'Lutjebroek'
+	# }
 );
 
 # A wrapper for when the commands are given in a private chat, or when 'I'
@@ -445,6 +450,23 @@ sub bofh
 	# srand(time);
 
 	return $excuse[rand(scalar(@excuse))];
+}
+
+# Simple wrapper around Botsma::Common::regen so we can first check if a user
+# has a preferred location for this command.
+sub regen
+{
+	my ($server, $params, $nick, $address, $target) = @_;
+
+	if (!$params and $users{$nick}{location})
+	{
+		return Botsma::Common::regen($server, $users{$nick}{location},
+			$nick, $address, $target);
+	}
+	else
+	{
+		return Botsma::Common::regen(@_);
+	}
 }
 
 signal_add("message public", "command");
