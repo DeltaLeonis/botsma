@@ -69,7 +69,11 @@ my %users =
 sub owncommand
 {
 	my ($server, $msg, $nick, $address, $target) = @_;
-	command($server, $msg, '', $address, $nick);
+	# Not sure why we used '' for $nick here... try a while *with* $nick.
+	####command($server, $msg, '', $address, $nick);
+
+	# Nick also becomes target.
+	command($server, $msg, $nick, $address, $nick);
 }
 
 # Execute the command given to the 'bot'. Only responds if prefixed by my nick
@@ -89,6 +93,8 @@ sub owncommand
 sub command
 {
 	my ($server, $msg, $nick, $address, $target) = @_;
+	print "nick = " . $nick;
+	print "target = " . $target;
 	my
 	(
 		$reply, $part, $cmd, $cmdref, $params, $mynick, $pattern, $replace,
@@ -98,7 +104,7 @@ sub command
 	$mynick = $server->{nick};
 
 	# When the nick is empty, it's probably ourselves.
-	$nick = $mynick if ($nick eq '');
+	#### $nick = $mynick if ($nick eq '');
 
 	if ($msg =~ m/^$mynick:/i)
 	{

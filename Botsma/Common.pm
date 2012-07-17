@@ -32,21 +32,6 @@ sub temp
 	my ($server, $params, $nick, $address, $target) = @_;
 	my ($url, $city, @params);
 
-	print 'Target = '.$target;
-	print 'Nick = '.$nick;
-
-	# UGLY FIX ETC PANIC BBQ!
-	#if ((lc $nick eq 'dtm') or (lc $target eq 'dtm'))
-	#{
-	#	return tempdtm();
-	#}
-	#elsif ((lc $nick eq 'akaidiot') or (lc $target eq 'akaidiot'))
-	#{
-	#	return tempaka();
-	#}
-
-	#@params = split(/\s+/, $params);
-
 	$city = $params;
 	if (!$city)
 	{
