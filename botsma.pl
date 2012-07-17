@@ -430,8 +430,7 @@ sub temp
 		# User didn't have a weather station set, or specified an explicit
 		# weather station in $params, so we'll return the temp subroutine from
 		# Botsma::Common.
-		return
-			Botsma::Common::temp($server, $params, $nick, $address, $target);
+		return Botsma::Common::temp(@_);
 	}
 }
 
