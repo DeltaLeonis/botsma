@@ -318,7 +318,7 @@ sub regen
 
 	my $url = get join('', 'http://gps.buienradar.nl/getrr.php?', 'lat=', $lat,
 		               '&lon=', $lon)
-		or print("Buienradar fail");
+		or return "Buienradar lijkt stuk te zijn";
 
 	my $count = 0;
 	my $prediction = "";
