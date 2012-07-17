@@ -23,6 +23,10 @@ use POSIX;
 # $nick The nickname that called this command.
 # $address Ignored.
 # $target Also the nickname that called this command?
+#
+# Returns:
+# The temperature with ' °C' attached, or an insult if the weather station
+# doesn't exist. 
 sub temp
 {
 	my ($server, $params, $nick, $address, $target) = @_;
@@ -56,6 +60,8 @@ sub temp
 	}
 	else
 	{
+		# Would be nicer if we make a distinction between a non-existing
+		# weather station and a missing temperature value.
 		return sprintf('%s %s, %s, anders zoek je eerst even een meetstation' .
 			           'op http://www.knmi.nl/actueel/',
 					   aanhef(), $nick, scheldwoord());

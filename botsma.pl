@@ -49,6 +49,20 @@ else
 	print 'Kon de excuse-file niet openen. Ironisch!';
 }
 
+my %users =
+(
+	akaIDIOT =>
+	{
+		wstation => 'Hoek van Holland',
+		location => 'Den Haag'
+	},
+	DTM =>
+	{
+		wstation => 'De Bilt',
+		location => 'Bussum'
+	},
+);
+
 # A wrapper for when the commands are given in a private chat, or when 'I'
 # (this irssi user) issued the commands myself.
 # The order of parameters is different in that case.
@@ -258,6 +272,7 @@ sub substitute
 	return ($result) ? $reply : '';
 }
 
+# Not even going to describe this :-)
 sub dans
 {
 	my ($server, $params, $nick, $address, $target) = @_;
@@ -339,53 +354,75 @@ sub p2000
 	}
 }
 
-sub tempdtm
+# Wrapper around the temp subroutine from Botsma::Common, to facilitate
+# comparisons between weather stations for certain nicks/users.
+#
+# Parameters:
+# $server Ignored.
+# $params The name of the weather station which can be found at
+#         http://www.knmi.nl/actueel/
+# $nick The nickname that called this command.
+# $address Ignored.
+# $target Target channel, or nick in case of a /query.
+#
+# Returns:
+# Temperature of Twenthe or the supplied weather station or...
+# Temperature difference between a users' preferred weather station and Twenthe
+# or...
+# An error message.
+sub temp
 {
 	my ($server, $params, $nick, $address, $target) = @_;
-	#my $stockholm = tempStockholm();
-	# Not really stockholm anymore ;-)
-	my $stockholm = temp($server, 'De Bilt', $nick, $address, $target);
-	my $enschede = temp('','','','','');
 
-	# Strip degrees, if not succesful it means some temperature was broken.
-	if ($enschede =~ s/ °C// and $stockholm =~ s/ °C//)
+	# Some user has a weather station set, so we'll show the difference with
+	# Twenthe.
+	if (!$params and $users{$nick}{wstation})
 	{
-		if ($stockholm < $enschede) 
+		my $otherStation =
+			Botsma::Common::temp($server, $users{$nick}{wstation},
+			                     $nick, $address, $target);
+		my $twenthe =
+			Botsma::Common::temp($server, '', $nick, $address, $target);
+
+		# Strip degrees, if not succesful it means some temperature was broken.
+		if ($twenthe =~ s/ °C// and $otherStation =~ s/ °C//)
 		{
-			return 'De Bilt ('.$stockholm.' °C) is '.
-			       sprintf('%.1f', $enschede - $stockholm).
-				   ' graden kouder dan Twenthe ('.$enschede.' °C).';
+
+			my $difference = $otherStation - $twenthe;
+			$difference = sprintf('%.1f', $difference);
+
+			my ($warmth);
+
+			if ($difference > 0)
+			{
+				$warmth = abs($difference) . ' graden warmer dan';
+			}
+			elsif ($difference < 0)
+			{
+				$warmth = abs($difference) . ' graden kouder dan';
+			}
+			else
+			{
+				$warmth = 'even warm als';
+			}
+
+			return join('', $users{$nick}{wstation}, $params, ' (',
+			            $otherStation, ' °C) is ', $warmth, ' Twenthe (',
+			            $twenthe, ' °C)');
 		}
 		else
 		{
-			return 'De Bilt ('.$stockholm.' °C) is '.
-			       sprintf('%.1f', $stockholm - $enschede).
-				   ' graden warmer dan Twenthe ('.$enschede.' °C).';
+			return 'Er is iets fout... waarschijnlijk is er een meetstation' .
+			       ' stuk.';
 		}
 	}
-}
-
-sub tempaka
-{
-	my ($server, $params, $nick, $address, $target) = @_;
-	my $hvh = temp($server, 'Hoek van Holland', $nick, $address, $target);
-	my $enschede = temp('','','','','');
-
-	# Strip degrees, if not succesful it means some temperature was broken.
-	if ($enschede =~ s/ °C// and $hvh =~ s/ °C//)
+	else
 	{
-		if ($hvh < $enschede) 
-		{
-			return 'Hoek van Holland ('.$hvh.' °C) is '.
-			       sprintf('%.1f', $enschede - $hvh).
-				   ' graden kouder dan Twenthe ('.$enschede.' °C).';
-		}
-		else
-		{
-			return 'Hoek van Holland ('.$hvh.' °C) is '.
-			       sprintf('%.1f', $hvh - $enschede).
-				   ' graden warmer dan Twenthe ('.$enschede.' °C).';
-		}
+		# User didn't have a weather station set, or specified an explicit
+		# weather station in $params, so we'll return the temp subroutine from
+		# Botsma::Common.
+		return
+			Botsma::Common::temp($server, $params, $nick, $address, $target);
 	}
 }
 
