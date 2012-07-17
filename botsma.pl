@@ -37,7 +37,6 @@ my $Strp = new DateTime::Format::Strptime(
 my $lasttime = '';
 
 # Read the BOFH file into memory.
-print("Reading the BOFH excuse file");
 my @excuse;
 
 if (open(F, '.irssi/scripts/excuses'))
@@ -93,8 +92,7 @@ sub owncommand
 sub command
 {
 	my ($server, $msg, $nick, $address, $target) = @_;
-	print "nick = " . $nick;
-	print "target = " . $target;
+
 	my
 	(
 		$reply, $part, $cmd, $cmdref, $params, $mynick, $pattern, $replace,
@@ -175,7 +173,7 @@ sub command
 				# Returns the variable that is defined.
 				$corrNick = $2 // $3;
 				$original = $4;
-				print('corrNick = ', $corrNick, ' , orginal = ', $original);
+
 				last;
 			}
 
@@ -185,8 +183,8 @@ sub command
 		# If $lines is not defined now, it means the pattern didn't match.
 		if (defined $lines)
 		{
-			print("Matching line is ", $lines->get_text(0));
 			$substitution = substitute($pattern, $replace, $flags, $original);
+
 			if ($substitution)
 			{
 				if ($corrNick eq $nick)
