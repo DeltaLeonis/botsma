@@ -4,7 +4,91 @@ use vars qw($VERSION %IRSSI);
 
 use Irssi qw(signal_add timeout_add);
 
+use LWP::Simple;
+
+use Botsma::Common;
+
+use warnings;
+
+$VERSION = '0.1';
+%IRSSI =
+(
+	authors => 'Jorrit Tijben',
+	contact => 'jorrit@tijben.net',
+	name => 'Zosma',
+	description => 'Some quick and dirty functions that can be invoked ' .
+	               'from IRC.',
+	license => 'GPL',
+);
+
 my %goals = ();
+
+# A wrapper for when the commands are given in a private chat, or when 'I'
+# (this irssi user) issued the commands myself.
+# The order of parameters is different in that case.
+sub owncommand
+{
+	my ($server, $msg, $nick, $address, $target) = @_;
+	# Not sure why we used '' for $nick here... try a while *with* $nick.
+	####command($server, $msg, '', $address, $nick);
+
+	# Nick also becomes target.
+	command($server, $msg, $nick, $address, $nick);
+}
+
+sub command
+{
+	my ($server, $msg, $nick, $address, $target) = @_;
+
+	my ($reply, $part, $cmd, $cmdref, $params, $mynick);
+
+	$mynick = $server->{nick};
+
+	# When the nick is empty, it's probably ourselves.
+	#### $nick = $mynick if ($nick eq '');
+
+	if ($msg =~ m/^$mynick:/i)
+	{
+		# Strip the prefix.
+		$msg =~ s/$mynick:\s*//i;
+		# Parse the line into the command and parameters.
+		($cmd, $params) = split(/\s+/, $msg, 2);
+
+		# $reply = Irssi::Script::botsma->$cmd($server, $params, $nick,
+		# $address, $target); would cause 'Irssi::Script::botsma to be
+		# the first argument to $cmd...  The following bypasses that by
+		# making use of the can() UNIVERSAL function.
+		eval
+		{
+			# Use the subroutine with name $cmd from either our own package
+			# or from Botsma::Common.
+			if ($cmdref = __PACKAGE__->can($cmd) or
+			    $cmdref = Botsma::Common->can($cmd))
+			{
+				$reply = $cmdref->($server, $params, $nick, $address, $target);
+			}
+			# Ehm... &($cmd) works too?
+		};
+		if ($@)
+		{
+			#warn $@;
+			# Could be other errors though...
+			# $server->command('msg '.$target.' Dat commando moet Dutchy nog implementeren.');
+		}
+	}
+
+	# Send the reply to the target (channel/nick), if it exists.
+	if ($reply)
+	{
+		foreach $part (split(/\\n/, $reply))
+		{
+			# Ugly way to sleep half a second
+			# select(undef, undef, undef, 0.5);
+			$server->command('msg '.$target.' '.$part);
+			$server->command('wait 50');
+		}
+	}
+}
 
 sub goals
 {
@@ -67,17 +151,15 @@ sub tempall
 		$raverdave, $square, $pixel);
 
 	$enschede = chr(03) . '08' .
-		temp(@_) . chr(03) .
+		Botsma::Common::temp(@_) . chr(03) .
 		' (' . chr(03) . '08' . 'E' . chr(03) .
 		'\'de)';
 	$starbuck = chr(03) . '03' .
-		temp($server, 'Eelde', $nick, $address, $target) . chr(03) .
-		' (' . chr(03) . '03' . 'S' . chr(03) .
-		'tarbuck)';
+		Botsma::Common::temp($server, 'Eelde', $nick, $address, $target) .
+		chr(03) .  ' (' . chr(03) . '03' . 'S' . chr(03) .  'tarbuck)';
 	$rincewind = chr(03) . '13' . 
-		temp($server, 'Schiphol', $nick, $address, $target) . chr(03) .
-		' (' . chr(03) . '13' . 'R' . chr(03) .
-		'incewind)';
+		Botsma::Common::temp($server, 'Schiphol', $nick, $address, $target) .
+		chr(03) .  ' (' . chr(03) . '13' . 'R' . chr(03) .  'incewind)';
 	$lovejoy = chr(03) . '12' .
 		tempLovejoy() . chr(03) .
 		' (' . chr(03) . '12' . 'L' . chr(03) .
