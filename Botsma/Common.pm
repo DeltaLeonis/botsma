@@ -39,7 +39,7 @@ sub temp
 	}
 
 	my $url = get 'http://www.knmi.nl/actueel/index.html';
-	if ($url =~ m/<td>$city<\/td>\s*<td>.*<\/td>\s*<td align=right>(-?\d*.\d)/i)
+	if ($url =~ m/<td>$city<\/td>\s*<td>.*<\/td>\s*<td align=right>(-?\d*\.\d)/i)
 	{
 		return $1.' °C';
 	}
@@ -304,8 +304,9 @@ sub regen
 
 	my ($coords, $lat, $lon, $url);
 
-	# Check whether a latitude and longitude were given.
-	if ($params =~ m/(-?\d\d?\.\d*)\s(-?\d\d?\d?\.\d*)/)
+	# Check whether a latitude and longitude were given. Must have at least
+	# a dot and one decimal after the dot.
+	if ($params =~ m/(-?\d\d?\.\d+)\s(-?\d\d?\d?\.\d+)/)
 	{
 		$lat = $1;
 		$lon = $2;
