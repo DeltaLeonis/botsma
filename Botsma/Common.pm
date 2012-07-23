@@ -288,8 +288,8 @@ sub citycoords
 # minutes.
 #
 # Parameters:
-# $params The city for which a prediction must be made. There is one hardcoded
-#         location 'Campus' that wouldn't otherwise be in the city database.
+# $params Either the city for which a prediction must be made, or GPS
+#         coördinates like '52.219515 6.891235'.
 #
 # Returns:
 # UTF-8 'graph' of the rain prediction, or:
@@ -302,22 +302,36 @@ sub regen
 	my ($server, $params, $nick, $address, $target) = @_;
 	my @rainbox = ("▁", "▂", "▃", "▄", "▅", "▆", "▇", "█");
 
-	if ($params eq '')
+	my ($coords, $lat, $lon, $url);
+
+	# Check whether a latitude and longitude were given.
+	if ($params =~ m/(-?\d\d?\.\d*)\s(-?\d\d?\d?\.\d*)/)
 	{
-		$params = 'Enschede';
+		$lat = $1;
+		$lon = $2;
+		$params = 'Coördinaten';
+	}
+	# Should be a city...
+	else
+	{
+		if ($params eq '')
+		{
+			# Default city.
+			$params = 'Enschede';
+		}
+
+		$coords = citycoords($server, $params, $nick, $address, $target);
+
+		if ($coords eq 'Dat gehucht kan niet worden gevonden')
+		{
+			return $coords;
+		}
+
+		($lat, $lon) = split(" ", $coords);
 	}
 
-	my $coords = citycoords($server, $params, $nick, $address, $target);
-
-	if ($coords eq 'Dat gehucht kan niet worden gevonden')
-	{
-		return $coords;
-	}
-
-	my ($lat, $lon) = split(" ", $coords);
-
-	my $url = get join('', 'http://gps.buienradar.nl/getrr.php?', 'lat=', $lat,
-		               '&lon=', $lon)
+	$url = get join('', 'http://gps.buienradar.nl/getrr.php?', 'lat=', $lat,
+	                    '&lon=', $lon)
 		or return "Buienradar lijkt stuk te zijn";
 
 	my $count = 0;
