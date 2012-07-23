@@ -47,8 +47,8 @@ sub temp
 	{
 		# Would be nicer if we make a distinction between a non-existing
 		# weather station and a missing temperature value.
-		return sprintf('%s %s, %s, anders zoek je eerst even een meetstation' .
-			           'op http://www.knmi.nl/actueel/',
+		return sprintf('%s %s, %s, anders zoek je eerst even een ' .
+		               'meetstation op http://www.knmi.nl/actueel/',
 					   aanhef(), $nick, scheldwoord());
 	}
 }
