@@ -67,6 +67,15 @@ my %users =
 	# }
 );
 
+my %locations =
+(
+	Campus =>
+	{
+		lat => 52.247195,
+		lon => 52.848019,
+	}
+);
+
 # A wrapper for when the commands are given in a private chat, or when 'I'
 # (this irssi user) issued the commands myself.
 # The order of parameters is different in that case.
@@ -452,16 +461,28 @@ sub bofh
 }
 
 # Simple wrapper around Botsma::Common::regen so we can first check if a user
-# has a preferred location for this command.
+# has a preferred location for this command, or whether we want to look up a
+# 'point of interest' that isn't defined in the large city database.
 sub regen
 {
 	my ($server, $params, $nick, $address, $target) = @_;
 
+	# This IRC nick has a preferred location.
 	if (!$params and $users{$nick}{location})
 	{
 		return Botsma::Common::regen($server, $users{$nick}{location},
 			$nick, $address, $target);
 	}
+	# Someone wants to look up the rain for a special point of interest.
+	elsif ($locations{$params})
+	{
+		my $coords = join(' ', $locations{$params}{lat},
+		                       $locations{$params}{lon});
+
+		return Botsma::Common::regen($server, $coords, $nick,
+		                             $address, $target);
+	}
+	# Just a normal lookup.
 	else
 	{
 		return Botsma::Common::regen(@_);
