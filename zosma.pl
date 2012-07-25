@@ -6,6 +6,8 @@ use Irssi qw(signal_add timeout_add);
 
 use LWP::Simple;
 
+use DateTime;
+
 use Botsma::Common;
 
 use warnings;
