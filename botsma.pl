@@ -69,7 +69,7 @@ my %users =
 
 my %locations =
 (
-	Campus =>
+	campus =>
 	{
 		lat => 52.247195,
 		lon => 52.848019,
@@ -474,7 +474,7 @@ sub regen
 			$nick, $address, $target);
 	}
 	# Someone wants to look up the rain for a special point of interest.
-	elsif ($locations{$params})
+	elsif ($locations{lc $params})
 	{
 		my $coords = join(' ', $locations{$params}{lat},
 		                       $locations{$params}{lon});
