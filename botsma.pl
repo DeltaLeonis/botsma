@@ -72,7 +72,7 @@ my %locations =
 	campus =>
 	{
 		lat => 52.247195,
-		lon => 52.848019,
+		lon => 6.848019,
 	}
 );
 
