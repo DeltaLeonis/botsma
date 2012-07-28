@@ -476,8 +476,8 @@ sub regen
 	# Someone wants to look up the rain for a special point of interest.
 	elsif ($locations{lc $params})
 	{
-		my $coords = join(' ', $locations{$params}{lat},
-		                       $locations{$params}{lon});
+		my $coords = join(' ', $locations{lc $params}{lat},
+		                       $locations{lc $params}{lon});
 
 		return Botsma::Common::regen($server, $coords, $nick,
 		                             $address, $target);
