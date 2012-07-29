@@ -12,6 +12,8 @@ use DateTime::Format::Strptime;
 
 use Botsma::Common;
 
+use Storable;
+
 use warnings;
 
 $VERSION = '0.5';
@@ -48,24 +50,36 @@ else
 	print 'Kon de excuse-file niet openen. Ironisch!';
 }
 
-my %users =
+# Read users preferences from disk
+my $usersRef = retrieve('.irssi/scripts/users');
+my %users = %$usersRef;
+
+# Possible user settings
+my %settings =
 (
-	akaIDIOT =>
-	{
-		wstation => 'Hoek van Holland',
-		location => 'Den Haag'
-	},
-	DTM =>
-	{
-		wstation => 'De Bilt',
-		location => 'Bussum'
-	},
-	# Zosma =>
-	# {
-	# 	wstation => 'Den Helder',
-	# 	location => 'Lutjebroek'
-	# }
+	wstation => 1,
+	location => 1,
+	regen => 1
 );
+
+#my %users =
+#(
+#	akaIDIOT =>
+#	{
+#		wstation => 'Hoek van Holland',
+#		location => 'Den Haag'
+#	},
+#	DTM =>
+#	{
+#		wstation => 'De Bilt',
+#		location => 'Bussum'
+#	},
+#	# Zosma =>
+#	# {
+#	# 	wstation => 'Den Helder',
+#	# 	location => 'Lutjebroek'
+#	# }
+#);
 
 my %locations =
 (
@@ -394,8 +408,11 @@ sub temp
 
 	# Some user has a weather station set, so we'll show the difference with
 	# Twenthe.
-	if (!$params and $users{$nick}{wstation})
+	if (!$params and
+		defined $users{$nick}{wstation} and
+		lc $users{$nick}{wstation} ne 'twenthe')
 	{
+		print "Other station is ", $users{$nick}{wstation};
 		my $otherStation =
 			Botsma::Common::temp($server, $users{$nick}{wstation},
 			                     $nick, $address, $target);
@@ -467,26 +484,95 @@ sub regen
 {
 	my ($server, $params, $nick, $address, $target) = @_;
 
-	# This IRC nick has a preferred location.
+	# No parameter, but the IRC nick has a preferred location.
 	if (!$params and $users{$nick}{location})
 	{
-		return Botsma::Common::regen($server, $users{$nick}{location},
-			$nick, $address, $target);
+		$params = $users{$nick}{location};
 	}
-	# Someone wants to look up the rain for a special point of interest.
-	elsif ($locations{lc $params})
-	{
-		my $coords = join(' ', $locations{lc $params}{lat},
-		                       $locations{lc $params}{lon});
 
-		return Botsma::Common::regen($server, $coords, $nick,
-		                             $address, $target);
+	# Check whether the specified location, or the IRC nick's preference
+	# location, is a special point of interest.
+	if ($locations{lc $params})
+	{
+		# $params will be the coordinates of the point of interest.
+		$params = join(' ', $locations{lc $params}{lat},
+		                    $locations{lc $params}{lon});
 	}
-	# Just a normal lookup.
+
+	return Botsma::Common::regen($server, $params, $nick, $address, $target);
+}
+
+# Store the preferences of a certain IRC nick.
+#
+# Parameters:
+# $server Ignored.
+# $params A key/value pair for a specific preference. They key must be a valid
+#         preference setting. Example: wstation Den Helder
+# $nick The IRC nick that wants to store his or her preference.
+# $address Ignored.
+# $target Ignored.
+#
+# Returns:
+# A confirmation of the stored preference if everything went well. Returns an
+# error message if no key/value pair was given, or if the key was not a valid
+# preference setting.
+sub set
+{
+	my ($server, $params, $nick, $address, $target) = @_;
+
+	my ($key, $value);
+
+	if ($params =~ /(\S+)\s+(\S.*)/)
+	{
+		$key = $1;
+		$value = $2;
+	}
 	else
 	{
-		return Botsma::Common::regen(@_);
+		return 'Heb zowel een optie als een waarde nodig.'
 	}
+	
+	if (exists $settings{$key})
+	{
+		$users{$nick}{$key} = $value;
+		store \%users, '.irssi/scripts/users';
+		return join('', $key, ' is nu ', $value, '.');
+	}
+	else
+	{
+		return $key . ' is helaas geen setting.';
+	}
+}
+
+# Show the preferences of an IRC nick.
+#
+# Parameters:
+# $server Ignored.
+# $params Ignored.
+# $nick The IRC nick that wants to look up the preferences he/she stored for
+#       certain commands.
+# $address Ignored.
+# $target Ignored.
+#
+# Returns:
+# A string with the preferences for the IRC nick, separated by a literal \n.
+sub prefs
+{
+	my ($server, $params, $nick, $address, $target) = @_;
+
+	my $message = "";
+	my $key;
+	# Can't be sure? Better way of doing this?
+	my $prefRef = $users{$nick};
+	my %prefs = %$prefRef;
+
+	foreach $key (keys %prefs)
+	{
+		$message = join('', $message, $key, ' = ', $prefs{$key}, '\n');
+	}
+
+	return ($message eq "") ?
+		'Je hebt geen voorkeuren opgeslagen.' : $message;
 }
 
 signal_add("message public", "command");
