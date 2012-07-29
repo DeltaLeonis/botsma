@@ -51,15 +51,15 @@ else
 }
 
 # Read users preferences from disk
-my $usersRef = retrieve('.irssi/scripts/users');
-my %users = %$usersRef;
+my %users = %{retrieve('.irssi/scripts/users')};
 
-# Possible user settings
+# Possible user settings, with default values. Note that these default values
+# are actually implemented/harcoded in the subroutines, so they're just used
+# informatively here.
 my %settings =
 (
-	wstation => 1,
-	location => 1,
-	regen => 1
+	wstation => 'Twenthe',
+	location => 'Enschede',
 );
 
 #my %users =
@@ -544,7 +544,8 @@ sub set
 	}
 }
 
-# Show the preferences of an IRC nick.
+# Show the preferences of an IRC nick, along with the default values for a
+# certain setting. Preferences that aren't set will still be shown.
 #
 # Parameters:
 # $server Ignored.
@@ -555,24 +556,63 @@ sub set
 # $target Ignored.
 #
 # Returns:
-# A string with the preferences for the IRC nick, separated by a literal \n.
+# A string with the preferences for the IRC nick, separated by a literal \n. If
+# the nick doesn't have a preference for a certain setting, '-' will be shown.
+# Every setting will also list the default value.
 sub prefs
 {
 	my ($server, $params, $nick, $address, $target) = @_;
 
 	my $message = "";
-	my $key;
-	# Can't be sure? Better way of doing this?
-	my $prefRef = $users{$nick};
-	my %prefs = %$prefRef;
+	my ($key, $value);
 
-	foreach $key (keys %prefs)
+	foreach $key (keys %settings)
 	{
-		$message = join('', $message, $key, ' = ', $prefs{$key}, '\n');
+		$message = join('', $message, $key, ': ');
+		$value = '-' unless ($value = ($users{$nick}{$key}));
+		$message = join('', $message, $value,
+		                ' (Default: ', $settings{$key}, ')\n');
 	}
 
-	return ($message eq "") ?
-		'Je hebt geen voorkeuren opgeslagen.' : $message;
+	return $message;
+}
+
+# Delete a preference, or all the preferences, of an IRC nick.
+#
+# Parameters:
+# $server Ignored.
+# $params The preference to delete, or 'all' to delete every preference.
+# $address Ignored.
+# $target Ignored.
+#
+# Returns:
+# A confirmation of deleting a single preference or all preferences. A warning
+# message if the preference couldn't be deleted because it didn't exist.
+sub delete
+{
+	my ($server, $params, $nick, $address, $target) = @_;
+
+	if (exists $users{$nick}{$params})
+	{
+		delete $users{$nick}{$params};
+		store \%users, '.irssi/scripts/users';
+		return join('', 'Voorkeur voor ', $params, ' gewist.');
+	}
+	elsif ($params eq 'all')
+	{
+		delete $users{$nick};
+		store \%users, '.irssi/scripts/users';
+		return 'Al je voorkeuren gewist.';
+	}
+	elsif ($params eq '')
+	{
+		return join('', 'Je moet wel opgeven wat je wilt wissen, ',
+		                Botsma::Common::scheldwoord(), '.');
+	}
+	else
+	{
+		return join('', 'Kan ', $params, ' niet wissen.');
+	}
 }
 
 signal_add("message public", "command");
