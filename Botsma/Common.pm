@@ -261,7 +261,7 @@ sub citycoords
 		# Line was found but it could be a municipality instead of the city.
 		if ($line =~ m/\Q$params\E/i)
 		{
-			@splitline = split("\t", $line);
+			@splitline = split(/\t/, $line);
 
 			# There is a problem for places with the same name, for example
 			# Hengelo (OV) and Hengelo (GLD). Right now this subroutine just
@@ -328,7 +328,7 @@ sub regen
 			return $coords;
 		}
 
-		($lat, $lon) = split(" ", $coords);
+		($lat, $lon) = split(/ /, $coords);
 	}
 
 	$url = get join('', 'http://gps.buienradar.nl/getrr.php?', 'lat=', $lat,
