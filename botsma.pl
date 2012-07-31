@@ -11,6 +11,7 @@ use DateTime;
 use DateTime::Format::Strptime;
 
 use Botsma::Common;
+use Botsma::WStations;
 
 use Storable;
 
@@ -406,24 +407,53 @@ sub temp
 {
 	my ($server, $params, $nick, $address, $target) = @_;
 
-	# Some user has a weather station set, so we'll show the difference with
-	# Twenthe.
-	if (!$params and
-		defined $users{$nick}{wstation} and
-		lc $users{$nick}{wstation} ne 'twenthe')
+	# Some user has a location station set. We will automatically determine the
+	# nearest weather station, and show the difference with Twenthe (if it's
+	# not Twenthe itself...).
+	if (!$params and defined $users{$nick}{location})
 	{
-		print "Other station is ", $users{$nick}{wstation};
-		my $otherStation =
-			Botsma::Common::temp($server, $users{$nick}{wstation},
-			                     $nick, $address, $target);
-		my $twenthe =
-			Botsma::Common::temp($server, '', $nick, $address, $target);
+		# Coordinates of the user's location.
+		my $coords;
+		# Nearest weather station to the user's location.
+		my $userStation;
+
+		my ($userTemp, $twenthe);
+
+
+		# Check whether the specified location, or the IRC nick's preference
+		# location, is a special point of interest.
+		if ($locations{lc $users{$nick}{location}})
+		{
+			# $params will be the coordinates of the point of interest.
+			$coords = join(' ', $locations{lc $users{$nick}{location}}{lat},
+								$locations{lc $users{$nick}{location}}{lon});
+		}
+		# Not a special point of interest, so look up the location with
+		# Botsma::Common:citycoords.
+		else
+		{
+			$coords =
+				Botsma::Common::citycoords($server, $users{$nick}{location},
+				                           $nick, $address, $target);
+		}
+
+		$userStation = Botsma::WStations::nearest($coords);
+		$twenthe = Botsma::Common::temp($server, '', $nick, $address, $target);
+
+		# Return the default Twenthe temperature, because the nearest weather
+		# station turned out to be Twenthe.
+		return Botsma::Common::temp(@_) if ($userStation eq 'Twenthe');
+
+		# Otherwise continue and show the difference between the weather
+		# station of the user and Twenthe.
+		$userTemp = Botsma::Common::temp($server, $userStation, $nick,
+		                                 $address, $target);
 
 		# Strip degrees, if not succesful it means some temperature was broken.
-		if ($twenthe =~ s/ °C// and $otherStation =~ s/ °C//)
+		if ($twenthe =~ s/ °C// and $userTemp =~ s/ °C//)
 		{
 
-			my $difference = $otherStation - $twenthe;
+			my $difference = $userTemp - $twenthe;
 			$difference = sprintf('%.1f', $difference);
 
 			my ($warmth);
@@ -441,8 +471,8 @@ sub temp
 				$warmth = 'even warm als';
 			}
 
-			return join('', $users{$nick}{wstation}, $params, ' (',
-			            $otherStation, ' °C) is ', $warmth, ' Twenthe (',
+			return join('', $userStation, $params, ' (',
+			            $userTemp, ' °C) is ', $warmth, ' Twenthe (',
 			            $twenthe, ' °C)');
 		}
 		else
@@ -453,8 +483,8 @@ sub temp
 	}
 	else
 	{
-		# User didn't have a weather station set, or specified an explicit
-		# weather station in $params, so we'll return the temp subroutine from
+		# User didn't have a location set, or specified an explicit weather
+		# station in $params, so we'll return the temp subroutine from
 		# Botsma::Common.
 		return Botsma::Common::temp(@_);
 	}
