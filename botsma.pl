@@ -553,7 +553,7 @@ sub set
 
 	if ($params =~ /(\S+)\s+(\S.*)/)
 	{
-		$key = $1;
+		$key = lc $1;
 		$value = $2;
 	}
 	else
@@ -563,6 +563,20 @@ sub set
 	
 	if (exists $settings{$key})
 	{
+		# If the user/nick wants to store a location, check whether this
+		# location is a valid city or a valid point of interest.
+		if ($key eq 'location')
+		{
+			my $coords = Botsma::Common::citycoords($server, $value, $nick,
+			                                        $address, $target);
+
+			if (($coords eq 'Dat gehucht kan niet worden gevonden') and
+			    !(exists $locations{lc $value}))
+			{
+				return 'Dat is geen geldige locatie.';
+			}
+		}
+
 		$users{$nick}{$key} = $value;
 		store \%users, '.irssi/scripts/users';
 		return join('', $key, ' is nu ', $value, '.');
