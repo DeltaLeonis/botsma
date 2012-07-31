@@ -424,7 +424,7 @@ sub temp
 		# location, is a special point of interest.
 		if ($locations{lc $users{$nick}{location}})
 		{
-			# $params will be the coordinates of the point of interest.
+			# $coords will be the coordinates of the point of interest.
 			$coords = join(' ', $locations{lc $users{$nick}{location}}{lat},
 								$locations{lc $users{$nick}{location}}{lon});
 		}
@@ -471,9 +471,8 @@ sub temp
 				$warmth = 'even warm als';
 			}
 
-			return join('', $userStation, $params, ' (',
-			            $userTemp, ' °C) is ', $warmth, ' Twenthe (',
-			            $twenthe, ' °C)');
+			return join('', $userStation, ' (', $userTemp, ' °C) is ',
+			                $warmth, ' Twenthe (', $twenthe, ' °C)');
 		}
 		else
 		{
