@@ -7,7 +7,6 @@ use Irssi::TextUI;
 
 use LWP::Simple;
 
-use DateTime;
 use DateTime::Format::Strptime;
 
 use Botsma::Common;
@@ -320,9 +319,11 @@ sub p2000
 {
 	my
 	(
-		$url, $msg, $valid, $key, $value, $brandweer, $ambulance, $politie, $server,
+		$url, $valid, $key, $value, $brandweer, $ambulance, $politie, $server,
 		$part, $dt
 	);
+
+	my $msg = '';
 
 	# Add mIRC-colours: Brandweer in red, Politie in blue, Ambulance in green.
 	$brandweer = chr(03).'04Brandweer'.chr(03);
@@ -364,12 +365,6 @@ sub p2000
 			    DateTime->compare($Strp->parse_datetime("$1 $2"), $lasttime) == 1)
 			{
 				$msg = $msg.$2.' '.$3.' '.$4.'\n';
-
-				# Add the colours.
-				$msg =~ s/Brandweer/$brandweer/g;
-				$msg =~ s/Politie/$politie/g;
-				$msg =~ s/Ambulance/$ambulance/g;
-
 				$lasttime = $Strp->parse_datetime("$1 $2");
 			}
 		}
@@ -377,6 +372,11 @@ sub p2000
 
 	if ($msg)
 	{
+		# Add the colours.
+		$msg =~ s/Brandweer/$brandweer/g;
+		$msg =~ s/Politie/$politie/g;
+		$msg =~ s/Ambulance/$ambulance/g;
+
 		# Send the annoucement to #inter-actief on IRCnet.
 		$server = Irssi::server_find_tag('IRCnet');
 		
