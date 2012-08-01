@@ -264,6 +264,9 @@ sub substitute
 	my ($pattern, $replace, $flags, $reply) = @_;
 	my $result;
 
+	# Better not to leave this to the caller function.
+	$pattern = quotemeta($pattern);
+
 	# This isn't pretty and doesn't look pretty, but I can't think of a
 	# better way at the moment. Extended patterns don't work for the 'g' flag.
 	eval
