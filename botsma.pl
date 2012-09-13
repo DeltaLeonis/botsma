@@ -5,7 +5,7 @@ use vars qw($VERSION %IRSSI);
 use Irssi qw(signal_add timeout_add);
 use Irssi::TextUI;
 
-use LWP::Simple;
+use LWP::Simple qw(:DEFAULT $ua);
 
 use DateTime::Format::Strptime;
 
@@ -13,6 +13,8 @@ use Botsma::Common;
 use Botsma::WStations;
 
 use Storable;
+
+use JSON;
 
 use warnings;
 
@@ -161,6 +163,27 @@ sub command
 			# $server->command('msg '.$target.' Dat commando moet Dutchy nog implementeren.');
 		}
 	}
+	elsif (($target eq "#inter-actief" || $target eq '#testchan') and
+	       $msg =~ m#(https?://.*youtube.*/watch\?.*v=[A-Za-z0-9_\-]+|https?://youtu\.be/[A-Za-z0-9_\-]+)#)
+	{
+		my $match = $1;
+		my $url = get 'http://www.youtube.com/oembed?url=' . $match;
+		my $decoded = decode_json($url);
+
+		$reply = $decoded->{title};
+	}
+	elsif (($target eq '#inter-actief' || $target eq "#testchan") and
+	       $msg =~ m#(https?://.*vimeo\.com/\d+)#)
+	{
+		my $match = $1;
+		$ua->agent('Botsma');
+		my $url = get 'http://vimeo.com/api/oembed.json?url=' . $match;
+		my $decoded = decode_json($url);
+		$reply = join(': ', $decoded->{title}, $decoded->{description});
+		# Description can be quite large... strip to 100 characters or something?
+		$reply = join('', substr($reply, 0, 100), '...');
+	}
+
 	# Someone is trying to substitute (correct) his previous sentence.
 	#
 	# With optional last separator (but note that it gives problems with,
