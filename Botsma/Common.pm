@@ -5,6 +5,7 @@ use utf8;
 
 use LWP::Simple;
 use Text::ParseWords;
+use Astro::Sunrise;
 
 # Needed for floor().
 use POSIX;
@@ -439,6 +440,60 @@ sub smoes
    
 	return sprintf('%s omdat %s.', $wat[rand(scalar(@wat))],
 		           $waarom[rand(scalar(@waarom))]);
+}
+
+# Get the sunset and sunrise for a given longitude and latitude.
+#
+# Parameters:
+# $params The longitude and latitude.
+#
+# Returns:
+# A string with the sunrise and sunset for today at the given longitude and
+# latitude, in HH:MM format.
+sub zon
+{
+	my ($server, $params, $nick, $address, $target) = @_;
+
+	# TODO: FIX THIS NEATLY ETC. RAGE BOO
+	# WARNING TODO: THIS IS CODE REPLICATION
+	# WOOOT WOOOOOT WOOOOT ALARM RED ALERT RAPE
+
+	my ($coords, $lat, $lon, $today, $tomorrow);
+
+	# Check whether a latitude and longitude were given. Must have at least
+	# a dot and one decimal after the dot.
+	if ($params =~ m/(-?\d\d?\.\d+)\s(-?\d\d?\d?\.\d+)/)
+	{
+		$lat = $1;
+		$lon = $2;
+		$params = 'Coördinaten';
+	}
+	# Should be a city...
+	else
+	{
+		if ($params eq '')
+		{
+			# Default city.
+			$params = 'Enschede';
+		}
+
+		$coords = citycoords($server, $params, $nick, $address, $target);
+
+		if ($coords eq 'Dat gehucht kan niet worden gevonden')
+		{
+			return $coords;
+		}
+
+		($lat, $lon) = split(/ /, $coords);
+	}
+
+	$today = join(" ", sun_rise($lon, $lat), '(op)',
+	                   sun_set($lon, $lat), '(onder)');
+	$tomorrow = join(" ", sun_rise($lon, $lat, undef, +1), '(op)',
+	                      sun_set($lon, $lat, undef, +1), '(onder)');
+
+	return join(" ", $today, 'Morgen:', $tomorrow);
+	
 }
 
 1;
