@@ -21,6 +21,7 @@ use POSIX;
 # $server Ignored.
 # $params The name of the weather station which can be found at
 #         http://www.knmi.nl/actueel/
+#         If no weather station name is supplied, use 'Twenthe' as a default.
 # $nick The nickname that called this command.
 # $address Ignored.
 # $target Also the nickname that called this command?
@@ -241,7 +242,7 @@ sub kies
 # 
 # Returns:
 # Latitude and longtitude, separated by a space.
-# Empty string if no city was specified.
+# Empty string if no city was specified, or if the city could not be found.
 # String with an error message if the database file couldn't be opened.
 sub citycoords
 {
@@ -272,12 +273,12 @@ sub citycoords
 			# Field 4 and 5 are the latitude and longitude.
 			if ((lc $params) eq (lc $splitline[23]))
 			{
-				return join(" ", $splitline[3], $splitline[4]);
+				return join(' ', $splitline[3], $splitline[4]);
 			}
 		}
 	}
 
-	return 'Dat gehucht kan niet worden gevonden';
+	return '';
 }
 
 # Get an 'ASCII art' graph of the expected rain in a certain Dutch city.
@@ -289,12 +290,15 @@ sub citycoords
 # minutes.
 #
 # Parameters:
-# $params Either the city for which a prediction must be made, or GPS
-#         coördinates like '52.219515 6.891235'.
+# $server Ignored.
+# $params GPS coördinates like '52.219515 6.891235'.
+# $nick Ignored.
+# $address Ignored.
+# $target Ignored.
 #
 # Returns:
-# UTF-8 'graph' of the rain prediction, or:
-# An appropriate message if the city couldn't be found.
+# UTF-8 'graph' of the rain prediction, or
+# An appropriate message if invalid GPS coordinates are supplied, or
 # A message that the website containing the predictions had connection
 # failures.
 sub regen
@@ -303,7 +307,7 @@ sub regen
 	my ($server, $params, $nick, $address, $target) = @_;
 	my @rainbox = ("▁", "▂", "▃", "▄", "▅", "▆", "▇", "█");
 
-	my ($coords, $lat, $lon, $url);
+	my ($lat, $lon, $url);
 
 	# Check whether a latitude and longitude were given. Must have at least
 	# a dot and one decimal after the dot.
@@ -311,25 +315,10 @@ sub regen
 	{
 		$lat = $1;
 		$lon = $2;
-		$params = 'Coördinaten';
 	}
-	# Should be a city...
 	else
 	{
-		if ($params eq '')
-		{
-			# Default city.
-			$params = 'Enschede';
-		}
-
-		$coords = citycoords($server, $params, $nick, $address, $target);
-
-		if ($coords eq 'Dat gehucht kan niet worden gevonden')
-		{
-			return $coords;
-		}
-
-		($lat, $lon) = split(/ /, $coords);
+		return 'Invalid GPS coordinates.';
 	}
 
 	$url = get join('', 'http://gps.buienradar.nl/getrr.php?', 'lat=', $lat,
@@ -392,7 +381,7 @@ sub regen
 		}
 	}
 
-	return join('', $prediction, ' (', $params, ' ', $lat, ' ', $lon, ')');
+	return $prediction;
 }
 
 # Return an excuse.

@@ -442,25 +442,14 @@ sub temp
 		my $coords;
 		# Nearest weather station to the user's location.
 		my $userStation;
-
+		# Temperature of the user's weather station, and the temperature of
+		# Twenthe.
 		my ($userTemp, $twenthe);
 
-
-		# Check whether the specified location, or the IRC nick's preference
-		# location, is a special point of interest.
-		if ($locations{lc $users{$nick}{location}})
+		unless ($coords = place($server, $users{$nick}{location}, $nick,
+		                        $address, $target))
 		{
-			# $coords will be the coordinates of the point of interest.
-			$coords = join(' ', $locations{lc $users{$nick}{location}}{lat},
-								$locations{lc $users{$nick}{location}}{lon});
-		}
-		# Not a special point of interest, so look up the location with
-		# Botsma::Common:citycoords.
-		else
-		{
-			$coords =
-				Botsma::Common::citycoords($server, $users{$nick}{location},
-				                           $nick, $address, $target);
+			return 'Dat gehucht kun niet worden gevonden.';
 		}
 
 		$userStation = Botsma::WStations::nearest($coords);
@@ -509,8 +498,7 @@ sub temp
 	else
 	{
 		# User didn't have a location set, or specified an explicit weather
-		# station in $params, so we'll return the temp subroutine from
-		# Botsma::Common.
+		# station in $params, so we'll use the default (which is 'Campus').
 		return Botsma::Common::temp(@_);
 	}
 }
@@ -532,29 +520,51 @@ sub bofh
 	return $excuse[rand(scalar(@excuse))];
 }
 
-# Simple wrapper around Botsma::Common::regen so we can first check if a user
-# has a preferred location for this command, or whether we want to look up a
-# 'point of interest' that isn't defined in the large city database.
+# Simple wrapper around Botsma::Common::regen so we can look up the coordinates
+# of the supplied place. If no place is given as an argument, then use the
+# user's preference setting if it is available. If the user doesn't have a
+# preference, use the default 'Campus'.
 sub regen
 {
 	my ($server, $params, $nick, $address, $target) = @_;
 
-	# No parameter, but the IRC nick has a preferred location.
-	if (!$params and $users{$nick}{location})
+	my ($coords, $regen, $maps, $lat, $lon);
+
+	# TODO: Is using 'defined $users{$nick}{location}' better?
+	if (!$params)
 	{
-		$params = $users{$nick}{location};
+		# No parameter, but the IRC nick has a preferred location.
+		#
+		# Also capitalise the first character of the location which is stored
+		# as an all lowercase string.
+		unless ($params = ucfirst($users{$nick}{location}))
+		{
+			# No parameter and no preferred location, so we'll use the default
+			# 'Campus'.
+			$params = 'Campus';
+		}
 	}
 
-	# Check whether the specified location, or the IRC nick's preference
-	# location, is a special point of interest.
-	if ($locations{lc $params})
+	print $params;
+
+	# Replace $params with the coordinates of the given place, unless the place
+	# couldn't be found.
+	unless ($coords = place($server, $params, $nick, $address, $target))
 	{
-		# $params will be the coordinates of the point of interest.
-		$params = join(' ', $locations{lc $params}{lat},
-		                    $locations{lc $params}{lon});
+		print $coords;
+		return 'Dat gehucht kan niet worden gevonden.';
 	}
 
-	return Botsma::Common::regen($server, $params, $nick, $address, $target);
+	print $coords;
+
+	# Google maps URL.
+	($lat, $lon) = split(/ /, $coords);
+	$maps = join('', 'http://maps.google.com/maps?z=14&q=loc:',
+	                 $lat, '+', $lon);
+
+	return join('', Botsma::Common::regen($server, $coords, $nick,
+	                                      $address, $target),
+	                $params, ': ', $maps);
 }
 
 # Store the preferences of a certain IRC nick.
@@ -591,16 +601,11 @@ sub set
 	{
 		# If the user/nick wants to store a location, check whether this
 		# location is a valid city or a valid point of interest.
-		if ($key eq 'location')
+		if ($key eq 'location' and
+		    !place($server, $value, $nick, $address, $target))
 		{
-			my $coords = Botsma::Common::citycoords($server, $value, $nick,
-			                                        $address, $target);
-
-			if (($coords eq 'Dat gehucht kan niet worden gevonden') and
-			    !(exists $locations{lc $value}))
-			{
-				return 'Dat is geen geldige locatie.';
-			}
+			# TODO: Test this!
+			return 'Dat is geen geldige locatie.';
 		}
 
 		$users{$nick}{$key} = $value;
@@ -680,7 +685,37 @@ sub delete
 	}
 	else
 	{
-		return join('', 'Kan ', $params, ' niet wissen.');
+		return join(' ', 'Kan', $params, 'niet wissen.');
+	}
+}
+
+# Look up the coordinates for a given place. This can be either a customly
+# defined location in the %locations hash, or a Dutch city.
+#
+# Parameters:
+# $server Ignored.
+# $params String with the name of a Dutch city, or a location from the
+#         %locations hash.
+# $address Ignored.
+# $target Ignored.
+#
+# Returns:
+# A string with the latitude and longitude of the place, separated by a space.
+# If the place wasn't found, the empty string is returned.
+sub place
+{
+	my ($server, $params, $nick, $address, $target) = @_;
+
+	# First check whether the place is a custom location. If it isn't, look it
+	# up in the city database.
+	if ($locations{lc $params})
+	{
+		return join(' ', $locations{lc $params}{lat},
+		                 $locations{lc $params}{lon});
+	}
+	else
+	{
+		return Botsma::Common::citycoords(@_);
 	}
 }
 
