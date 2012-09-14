@@ -545,8 +545,6 @@ sub regen
 		}
 	}
 
-	print $params;
-
 	# Replace $params with the coordinates of the given place, unless the place
 	# couldn't be found.
 	unless ($coords = place($server, $params, $nick, $address, $target))
@@ -555,8 +553,6 @@ sub regen
 		return 'Dat gehucht kan niet worden gevonden.';
 	}
 
-	print $coords;
-
 	# Google maps URL.
 	($lat, $lon) = split(/ /, $coords);
 	$maps = join('', 'http://maps.google.com/maps?z=14&q=loc:',
@@ -564,7 +560,7 @@ sub regen
 
 	return join('', Botsma::Common::regen($server, $coords, $nick,
 	                                      $address, $target),
-	                $params, ': ', $maps);
+	                ' ', $params, ': ', $maps);
 }
 
 # Store the preferences of a certain IRC nick.
