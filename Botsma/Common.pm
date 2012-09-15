@@ -73,9 +73,17 @@ sub temp
 	}
 
 	my $url = get 'http://www.knmi.nl/actueel/index.html';
-	if ($url =~ m/<td>$city<\/td>\s*<td>.*<\/td>\s*<td align=right>(-?\d*\.\d)/i)
+	if ($url =~ m/<td>$city<\/td>\s*<td>.*<\/td>\s*<td align=right>(-?\d*\.\d)?/i)
 	{
-		return $1.' °C';
+		if ($1)
+		{
+			return $1.' °C';
+		}
+		else
+		{
+			return 'De temperatuur van dit meetstation is (tijdelijk) ' .
+			       'niet beschikbaar.';
+		}
 	}
 	else
 	{
@@ -313,7 +321,6 @@ sub citycoords
 		return '';
 	}
 
-	# TODO CHANGE BACK
 	open(F, '.irssi/scripts/nl.txt') or
 		return "Couldn't open the coordinate database.";
 	

@@ -453,8 +453,6 @@ sub temp
 		# be found, or if multiple cities are found.
 		$coords = place($server, $params, $nick, $address, $target);
 
-		print $params;
-		print $coords;
 		my $check;
 		if ($check = _checkPlace($server, $coords, $nick, $address, $target))
 		{
