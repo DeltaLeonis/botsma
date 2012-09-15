@@ -433,80 +433,102 @@ sub temp
 {
 	my ($server, $params, $nick, $address, $target) = @_;
 
-	# Some user has a location station set. We will automatically determine the
-	# nearest weather station, and show the difference with Twenthe (if it's
-	# not Twenthe itself...).
-	if (!$params and defined $users{$nick}{location})
+	# Explicit parameters? Then directly pass it on...
+	if ($params)
 	{
-		# Coordinates of the user's location.
-		my $coords;
-		# Nearest weather station to the user's location.
+		return Botsma::Common::temp(@_);
+	}
+	else
+	{
+		# Weather station of the user. Set by a nearest neighbour search from
+		# the location setting, or directly from the weather station setting.
 		my $userStation;
+
 		# Temperature of the user's weather station, and the temperature of
 		# Twenthe.
 		my ($userTemp, $twenthe);
 
-		# Replace $params with the user defined setting.
-		$params = $users{$nick}{location};
-
-		# Look up the coordinates of the given place. Return if the place couldn't
-		# be found, or if multiple cities are found.
-		$coords = place($server, $params, $nick, $address, $target);
-
-		my $check;
-		if ($check = _checkPlace($server, $coords, $nick, $address, $target))
+		# Some user explicitly stored a weather station preference.
+		if (defined $users{$nick}{wstation})
 		{
-			return $check;
+			$userStation = $users{$nick}{wstation};
+		}
+		# Some user has a location set. We will automatically determine the
+		# nearest weather station, and show the difference with Twenthe (if
+		# it's not Twenthe itself...).
+		elsif (defined $users{$nick}{location})
+		{
+			# Coordinates of the user's location.
+			my $coords;
+
+			# Replace $params with the user defined setting.
+			$params = $users{$nick}{location};
+
+			# Look up the coordinates of the given place. Return if the place
+			# couldn't be found, or if multiple cities are found.
+			$coords = place($server, $params, $nick, $address, $target);
+
+			# Check whether we got something other than coordinates and return
+			# if this is the case.
+			my $check;
+			if ($check = _checkPlace($server, $coords, $nick,
+			                         $address, $target))
+			{
+				return $check;
+			}
+
+			$userStation = Botsma::WStations::nearest($coords);
+
+			# Return the default Twenthe temperature, because the nearest
+			# weather station turned out to be Twenthe.
+			return Botsma::Common::temp(@_) if ($userStation eq 'Twenthe');
+		}
+		# No weather station was supplied, and the user didn't have preference
+		# settings. Just call Botsma::Common::temp and get the temperature for
+		# the default weather station.
+		else
+		{
+			return Botsma::Common::temp(@_);
 		}
 
-		$userStation = Botsma::WStations::nearest($coords);
-		$twenthe = Botsma::Common::temp($server, '', $nick, $address, $target);
-
-		# Return the default Twenthe temperature, because the nearest weather
-		# station turned out to be Twenthe.
-		return Botsma::Common::temp(@_) if ($userStation eq 'Twenthe');
+		# General section for when either location or wstation was set.
+		$twenthe = Botsma::Common::temp($server, '', $nick,
+										$address, $target);
 
 		# Otherwise continue and show the difference between the weather
 		# station of the user and Twenthe.
 		$userTemp = Botsma::Common::temp($server, $userStation, $nick,
-		                                 $address, $target);
+										 $address, $target);
+		
+		return 'Meetstation Twenthe is wat brakjes.'
+			unless $twenthe =~ s/ °C//;
 
-		# Strip degrees, if not succesful it means some temperature was broken.
-		if ($twenthe =~ s/ °C// and $userTemp =~ s/ °C//)
+		return
+			join(' ', 'Meetstation', $userStation, 'bestaat niet of is stuk.')
+			unless $userTemp =~ s/ °C//;
+
+		# If we didn't return up until this point, we have two valid
+		# temperatures.
+		my $difference = $userTemp - $twenthe;
+		$difference = sprintf('%.1f', $difference);
+
+		my ($warmth);
+
+		if ($difference > 0)
 		{
-
-			my $difference = $userTemp - $twenthe;
-			$difference = sprintf('%.1f', $difference);
-
-			my ($warmth);
-
-			if ($difference > 0)
-			{
-				$warmth = abs($difference) . ' graden warmer dan';
-			}
-			elsif ($difference < 0)
-			{
-				$warmth = abs($difference) . ' graden kouder dan';
-			}
-			else
-			{
-				$warmth = 'even warm als';
-			}
-
-			return join('', $userStation, ' (', $userTemp, ' °C) is ',
-			                $warmth, ' Twenthe (', $twenthe, ' °C)');
+			$warmth = abs($difference) . ' graden warmer dan';
+		}
+		elsif ($difference < 0)
+		{
+			$warmth = abs($difference) . ' graden kouder dan';
 		}
 		else
 		{
-			return 'Er is iets fout... waarschijnlijk is er een meetstation' .
-			       ' stuk.';
+			$warmth = 'even warm als';
 		}
-	}
-	else
-	{
-		# User didn't have a location set, or specified an explicit weather
-		# station in $params, so we'll use the default (which is 'Campus').
-		return Botsma::Common::temp(@_);
+
+		return join('', $userStation, ' (', $userTemp, ' °C) is ',
+						$warmth, ' Twenthe (', $twenthe, ' °C)');
 	}
 }
 
