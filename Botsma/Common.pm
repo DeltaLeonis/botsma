@@ -363,7 +363,10 @@ sub citycoords
 #
 # Actually, 8 different UTF-8 block symbols are used to make up the graph.
 # Every block represents 0.75 mm/h rain. If more than 6 mm/h is expected for a
-# certain period, a red exclamation mark will be displayed. Every UTF-8 block
+# certain period, colours will be added in the ranges 6-7 mm/h, 7-8 mm/h, 8-9
+# mm/h, 9-10 mm/h. For more than 10 mm/h, the colour will be red.
+#
+# Every UTF-8 block
 # symbol has a time span of 5 minutes; a vertical bar is set at every 30
 # minutes.
 #
@@ -435,7 +438,6 @@ sub regen
 			#
 			# What we'll do is: calculate the rain intensity using the above
 			# formula, then split the 6 mm up in 8 buckets of 0.75 mm each.
-			# Everything more than 6 mm/h will get a red '!'
 			if ($rain == 0)
 			{
 				$prediction .= ' ';
@@ -444,14 +446,41 @@ sub regen
 			{
 				$mm = 10 ** (($rain - 109) / 32);
 
-				if ($mm > 6)
+				# Colour 6-7 mm with blue, 7-8 mm with green, 8-9 mm with
+				# yellow, 9-10 mm with orange, and 10+ mm with red. Otherwise,
+				# use the appriopriate uncoloured characters from $rainbox.
+				switch($mm)
 				{
-					$prediction .= join('', chr(03), '04!', chr(03));
-				}
-				else
-				{
-					$bucket = floor(($mm * 8) / 6);
-					$prediction .= $rainbox[$bucket];
+					case { $_[0] > 6 and $_[0] <= 7 }
+					{
+						$prediction .=
+							join('', chr(03), '11', $rainbox[7], chr(03));
+					}
+					case { $_[0] > 7 and $_[0] <= 8 }
+					{
+						$prediction .=
+							join('', chr(03), '09', $rainbox[7], chr(03));
+					}
+					case { $_[0] > 8 and $_[0] <= 9 }
+					{
+						$prediction .=
+							join('', chr(03), '08', $rainbox[7], chr(03));
+					}
+					case { $_[0] > 9 and $_[0] <= 10 }
+					{
+						$prediction .=
+							join('', chr(03), '07', $rainbox[7], chr(03));
+					}
+					case { $_[0] > 10 }
+					{
+						$prediction .=
+							join('', chr(03), '04', $rainbox[7], chr(03));
+					}
+					else
+					{
+						$bucket = floor(($mm * 8) / 6);
+						$prediction .= $rainbox[$bucket];
+					}
 				}
 			}
 
