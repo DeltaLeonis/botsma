@@ -446,10 +446,19 @@ sub temp
 		# Twenthe.
 		my ($userTemp, $twenthe);
 
-		unless ($coords = place($server, $users{$nick}{location}, $nick,
-		                        $address, $target))
+		# Replace $params with the user defined setting.
+		$params = $users{$nick}{location};
+
+		# Look up the coordinates of the given place. Return if the place couldn't
+		# be found, or if multiple cities are found.
+		$coords = place($server, $params, $nick, $address, $target);
+
+		print $params;
+		print $coords;
+		my $check;
+		if ($check = _checkPlace($server, $coords, $nick, $address, $target))
 		{
-			return 'Dat gehucht kun niet worden gevonden.';
+			return $check;
 		}
 
 		$userStation = Botsma::WStations::nearest($coords);
@@ -528,7 +537,7 @@ sub regen
 {
 	my ($server, $params, $nick, $address, $target) = @_;
 
-	my ($coords, $regen, $maps, $lat, $lon);
+	my ($coords, $regen, $maps, $lat, $lon, $check);
 
 	# TODO: Is using 'defined $users{$nick}{location}' better?
 	if (!$params)
@@ -545,12 +554,13 @@ sub regen
 		}
 	}
 
-	# Replace $params with the coordinates of the given place, unless the place
-	# couldn't be found.
-	unless ($coords = place($server, $params, $nick, $address, $target))
+	# Look up the coordinates of the given place. Return if the place couldn't
+	# be found, or if multiple cities are found.
+	$coords = place($server, $params, $nick, $address, $target);
+	
+	if ($check = _checkPlace($server, $coords, $nick, $address, $target))
 	{
-		print $coords;
-		return 'Dat gehucht kan niet worden gevonden.';
+		return $check;
 	}
 
 	# Google maps URL.
@@ -597,11 +607,17 @@ sub set
 	{
 		# If the user/nick wants to store a location, check whether this
 		# location is a valid city or a valid point of interest.
-		if ($key eq 'location' and
-		    !place($server, $value, $nick, $address, $target))
+		if ($key eq 'location')
 		{
-			# TODO: Test this!
-			return 'Dat is geen geldige locatie.';
+			my ($coords, $check);
+
+			$coords = place($server, $value, $nick, $address, $target);
+
+			if ($check = _checkPlace($server, $coords, $nick,
+			                         $address, $target))
+			{
+				return $check;
+			}
 		}
 
 		$users{$nick}{$key} = $value;
@@ -686,21 +702,32 @@ sub delete
 }
 
 # Look up the coordinates for a given place. This can be either a customly
-# defined location in the %locations hash, or a Dutch city.
+# defined location in the %locations hash, or a Dutch city. It can even be GPS
+# coordinates, to provide an easy way to pass everything 'location based' to
+# this function.
 #
 # Parameters:
 # $server Ignored.
-# $params String with the name of a Dutch city, or a location from the
-#         %locations hash.
+# $params String with the name of a Dutch city, a location from the
+#         %locations hash, or GPS coordinates.
 # $address Ignored.
 # $target Ignored.
 #
 # Returns:
 # A string with the latitude and longitude of the place, separated by a space.
 # If the place wasn't found, the empty string is returned.
+# If multiple cities (with the same name) were found, return a string with a
+# warning and a list of the cities, province and coordinates. Each city is
+# separated with a literal '\n'.
 sub place
 {
 	my ($server, $params, $nick, $address, $target) = @_;
+
+	# Are these GPS coordinates, so we can pass them on immediately?
+	if (Botsma::Common::validcoords(@_))
+	{
+		return $params;
+	}
 
 	# First check whether the place is a custom location. If it isn't, look it
 	# up in the city database.
@@ -711,7 +738,71 @@ sub place
 	}
 	else
 	{
-		return Botsma::Common::citycoords(@_);
+		my @cities = split(/\\n/, Botsma::Common::citycoords(@_));
+
+		# No results!
+		if (!(scalar @cities))
+		{
+			return '';
+		}
+		elsif (scalar @cities == 1)
+		{
+			# Only get the coordinates.
+			if ($cities[0] =~ m/(-?\d\d?\.\d+)\s(-?\d\d?\d?\.\d+)/)
+			{
+				return join(' ', $1, $2);
+			}
+			# This means that the string was wrongly formatted.
+			else
+			{
+				return '';
+			}
+		}
+		else
+		{
+			return join('\n', 'Meerdere steden gevonden. Plak de ' .
+			                  'provincie-afkorting erachter om een unieke ' .
+			                  'te kiezen:', @cities);
+		}
+	}
+}
+
+# Helper function to validate the result from place().
+#
+# Returns appropriate messages if the result from place() if no city was found,
+# or if multiple cities were found.
+
+# Parameters:
+# $server Ignored.
+# $params The result from place().
+# $nick Ignored.
+# $address Ignored.
+# $target Ignored.
+#
+# Returns:
+# The string 'Dat gehucht kan niet worden gevonden.' if no city was found. This
+# means that the result from place() was the empty string.
+# or...
+# A list of cities to choose from if multiple cities were found. See the
+# documentation at place().
+sub _checkPlace
+{
+	my ($server, $params, $nick, $address, $target) = @_;
+
+	if (!$params)
+	{
+		# City not found.
+		return 'Dat gehucht kan niet worden gevonden.';
+	}
+	elsif (!Botsma::Common::validcoords(@_))
+	{
+		# Multiple cities.
+		return $params;
+	}
+	else
+	{
+		# Normal, valid coordinates.
+		return '';
 	}
 }
 

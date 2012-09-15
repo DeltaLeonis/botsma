@@ -10,6 +10,38 @@ use Astro::Sunrise;
 # Needed for floor().
 use POSIX;
 
+my %province =
+(
+	"01" => "DR",
+	"16" => "FL",
+	"02" => "FR",
+	"03" => "GD",
+	"04" => "GR",
+	"05" => "LB",
+	"06" => "NB",
+	"07" => "NH",
+	"15" => "OV",
+	"09" => "UT",
+	"10" => "ZL",
+	"11" => "ZH"
+);
+
+my %revProvince =
+(
+	DR => "01",
+	FL => "16",
+	FR => "02",
+	GD => "03",
+	GR => "04",
+	LB => "05",
+	NB => "06",
+	NH => "07",
+	OV => "15",
+	UT => "09",
+	ZL => "10",
+	ZH => "11"
+);
+
 # All subroutines have a common set of parameters. Often, things like $server
 # or $address are ignored, but because the calls to the subroutines will be
 # automatically made from IRC we use the same set of parameters in every
@@ -232,31 +264,63 @@ sub kies
 }
 
 # Get the GPS coordinates of a city in The Netherlands.
+# 
+# Because there are cases where different places share the same name, this
+# function returns the city name, province abbreviation and GPS coordinates. If
+# multiple cities are found, separate them with a literal '\n' (not newline,
+# but a backslash and 'n').
 #
+# The city name and province abbreviation are given to enable a calling
+# function to supply a unique city name.
+#
+# For example, if the caller has 'Rijswijk' as its argument, this function will
+# return:
+#
+# Rijswijk GD 51.958553 5.357228\nRijswijk NB 51.799972 5.022524\nRijswijk ZH 52.025498 4.310793
+#
+# Calling this function again with 'Rijswijk GD' only returns
+#
+# Rijswijk GD 51.958553 5.357228
+#
+# For places that are unique, calling them without a province abbreviation is
+# sufficient.
+# 
 # Parameters:
 # $server Ignored.
-# $params The name of the city.
+# $params A string with the name of the city.
 # $nick Ignored.
 # $address Ignored.
 # $target Ignored.
 # 
 # Returns:
-# Latitude and longtitude, separated by a space.
-# Empty string if no city was specified, or if the city could not be found.
-# String with an error message if the database file couldn't be opened.
+#
+# A string with the city name, province abbreviation and GPS coordinates,
+# separated by spaces. Multiple results are separated by a literal '\n'.
+# 
+# Note that a city can, of course, also have spaces in the name.
+#
+# The empty string is returned if no city was specified, or if the city could
+# not be found.
+# Returns an error message if the database file couldn't be opened.
 sub citycoords
 {
 	my ($server, $params, $nick, $address, $target) = @_;
 
-	my ($line, $full_name_ro, @splitline);
+	my ($line, $full_name_ro, @splitline, $city, $cities, $provAbbr);
 
 	if ($params eq '')
 	{
 		return '';
 	}
 
+	# TODO CHANGE BACK
 	open(F, '.irssi/scripts/nl.txt') or
-		return "Couldn't open the coordinate database";
+		return "Couldn't open the coordinate database.";
+	
+	$params =~ s/ (\w\w)$//;
+	$provAbbr = $revProvince{uc $1};
+
+	$cities = '';
 
 	while ($line = <F>)
 	{
@@ -265,20 +329,27 @@ sub citycoords
 		{
 			@splitline = split(/\t/, $line);
 
-			# There is a problem for places with the same name, for example
-			# Hengelo (OV) and Hengelo (GLD). Right now this subroutine just
-			# finds the first match, but a neater solution would be nice.
-
 			# Field 24 is FULL_NAME_RO.
 			# Field 4 and 5 are the latitude and longitude.
+			# Field 14 is ADM1 (province in this case).
 			if ((lc $params) eq (lc $splitline[23]))
 			{
-				return join(' ', $splitline[3], $splitline[4]);
+				$city = join(' ', $splitline[23], $province{$splitline[13]},
+				                  $splitline[3], $splitline[4]);
+				# Caller specified a province, return only one item.
+				if ($provAbbr and $provAbbr eq $splitline[13])
+				{
+					return $city;
+				}
+				else
+				{
+					$cities = $cities . $city . '\n';
+				}
 			}
 		}
 	}
 
-	return '';
+	return $cities;
 }
 
 # Get an 'ASCII art' graph of the expected rain in a certain Dutch city.
@@ -483,6 +554,20 @@ sub zon
 
 	return join(" ", $today, 'Morgen:', $tomorrow);
 	
+}
+
+sub validcoords
+{
+	my ($server, $params, $nick, $address, $target) = @_;
+
+	if ($params =~ m/^-?\d\d?\.\d+\s-?\d\d?\d?\.\d+$/)
+	{
+		return 'Yes';
+	}
+	else
+	{
+		return '';
+	}
 }
 
 1;
