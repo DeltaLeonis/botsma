@@ -483,20 +483,17 @@ sub temp
 		# couldn't be found, or if multiple cities are found.
 		$coords = place($server, $params, $nick, $address, $target);
 
-		# Check whether we got something other than coordinates and return
-		# if this is the case.
+		# Check whether we got something other than coordinates and return if
+		# this is the case. This should've been checked while saving the
+		# preference, but we'll be extra sure...
 		my $check;
 		if ($check = _checkPlace($server, $coords, $nick,
-								 $address, $target))
+		                         $address, $target))
 		{
 			return $check;
 		}
 
 		$userStation = Botsma::WStations::nearest($coords);
-
-		# Return the default Twenthe temperature, because the nearest
-		# weather station turned out to be Twenthe.
-		return Botsma::Common::temp(@_) if ($userStation eq 'Twenthe');
 	}
 	# No weather station was supplied, and the user didn't have preference
 	# settings. Just call Botsma::Common::temp and get the temperature for
@@ -507,13 +504,18 @@ sub temp
 	}
 
 	# General section for when either location or wstation was set.
+
 	$twenthe = Botsma::Common::temp($server, '', $nick,
-									$address, $target);
+	                                $address, $target);
+
+	# Return the default Twenthe temperature, because the nearest
+	# weather station turned out to be Twenthe.
+	return join('', $prefix, $twenthe) if ($userStation eq 'Twenthe');
 
 	# Otherwise continue and show the difference between the weather
 	# station of the user and Twenthe.
 	$userTemp = Botsma::Common::temp($server, $userStation, $nick,
-									 $address, $target);
+	                                 $address, $target);
 	
 	return 'Meetstation Twenthe is wat brakjes.'
 		unless $twenthe =~ s/ °C//;
@@ -543,7 +545,7 @@ sub temp
 	}
 
 	return join('', $prefix, $userStation, ' (', $userTemp, ' °C) is ',
-					$warmth, ' Twenthe (', $twenthe, ' °C)');
+	                $warmth, ' Twenthe (', $twenthe, ' °C)');
 }
 
 # Get a Bastard Operator From Hell excuse.
