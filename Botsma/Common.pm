@@ -10,6 +10,8 @@ use Astro::Sunrise;
 # Needed for floor().
 use POSIX;
 
+use Switch;
+
 my %province =
 (
 	"01" => "DR",
