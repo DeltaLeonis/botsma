@@ -64,25 +64,6 @@ my %settings =
 	location => 'Enschede',
 );
 
-#my %users =
-#(
-#	akaIDIOT =>
-#	{
-#		wstation => 'Hoek van Holland',
-#		location => 'Den Haag'
-#	},
-#	DTM =>
-#	{
-#		wstation => 'De Bilt',
-#		location => 'Bussum'
-#	},
-#	# Zosma =>
-#	# {
-#	# 	wstation => 'Den Helder',
-#	# 	location => 'Lutjebroek'
-#	# }
-#);
-
 my %locations =
 (
 	campus =>
@@ -95,22 +76,26 @@ my %locations =
 # A wrapper for when the commands are given in a private chat, or when 'I'
 # (this irssi user) issued the commands myself.
 # The order of parameters is different in that case.
-sub owncommand
+sub _parseown
 {
 	my ($server, $msg, $nick, $address, $target) = @_;
 	# Not sure why we used '' for $nick here... try a while *with* $nick.
 	####command($server, $msg, '', $address, $nick);
 
 	# Nick also becomes target.
-	command($server, $msg, $nick, $address, $nick);
+	_parse($server, $msg, $nick, $address, $nick);
 }
 
-# Execute the command given to the 'bot'. Only responds if prefixed by my nick
-# plus a colon, like 'Zosma: temp'.
+# Parse messages the client/bot receives, and call the appropriate functions to
+# do something useful with them.  For example, if messages are prefixed by the
+# bot's name and a colon, like 'Zosma:', it means that someone requested a
+# command.
 #
-# This function also provides a substitute 'command' for people in some
-# channels. For example, they can type 's/old/new' to correct their previous
-# sentence.
+# Messages containing YouTube or Vimeo links will announce the title, and
+# messages like 's/pattern/replace/i' will be handed off to a sed-like
+# function. 
+#
+# More functions can and will be added...
 # 
 # Parameters:
 # $server The server from which the message originated.
@@ -119,15 +104,12 @@ sub owncommand
 # $address User or server host? Ignored anyway.
 # $target The IRC channel or IRC query nickname.
 #
-sub command
+sub _parse
 {
 	my ($server, $msg, $nick, $address, $target) = @_;
 
-	my
-	(
-		$reply, $part, $cmd, $cmdref, $params, $mynick, $pattern, $replace,
-		$flags, $corrNick, $substWindow, $lines, $original, $substitution
-	);
+	my $mynick;
+	my $reply = '';
 
 	$mynick = $server->{nick};
 
@@ -136,53 +118,17 @@ sub command
 
 	if ($msg =~ m/^$mynick:/i)
 	{
-		# Strip the prefix.
-		$msg =~ s/$mynick:\s*//i;
-		# Parse the line into the command and parameters.
-		($cmd, $params) = split(/\s+/, $msg, 2);
-
-		# $reply = Irssi::Script::botsma->$cmd($server, $params, $nick,
-		# $address, $target); would cause 'Irssi::Script::botsma to be
-		# the first argument to $cmd...  The following bypasses that by
-		# making use of the can() UNIVERSAL function.
-		eval
-		{
-			# Use the subroutine with name $cmd from either our own package
-			# or from Botsma::Common.
-			if ($cmdref = __PACKAGE__->can($cmd) or
-			    $cmdref = Botsma::Common->can($cmd))
-			{
-				$reply = $cmdref->($server, $params, $nick, $address, $target);
-			}
-			# Ehm... &($cmd) works too?
-		};
-		if ($@)
-		{
-			#warn $@;
-			# Could be other errors though...
-			# $server->command('msg '.$target.' Dat commando moet Dutchy nog implementeren.');
-		}
+		$reply = _command(@_, $mynick);
 	}
 	elsif (($target eq "#inter-actief" || $target eq '#testchan') and
-	       $msg =~ m#(https?://.*youtube.*/watch\?.*v=[A-Za-z0-9_\-]+|https?://youtu\.be/[A-Za-z0-9_\-]+)#)
+	       $msg =~ m#(https?://.*youtube.*/watch\?.*v=|https?://youtu\.be/)([A-Za-z0-9_\-]+)#)
 	{
-		my $match = $1;
-		print $match;
-		my $url = get 'http://www.youtube.com/oembed?url=' . $match;
-		my $decoded = decode_json($url);
-
-		$reply = $decoded->{title};
+		$reply = _youtube($2);
 	}
 	elsif (($target eq '#inter-actief' || $target eq "#testchan") and
-	       $msg =~ m#(https?://.*vimeo\.com/\d+)#)
+	       $msg =~ m#https?://.*vimeo\.com/(\d+)#)
 	{
-		my $match = $1;
-		$ua->agent('Botsma');
-		my $url = get 'http://vimeo.com/api/oembed.json?url=' . $match;
-		my $decoded = decode_json($url);
-		$reply = join(': ', $decoded->{title}, $decoded->{description});
-		# Description can be quite large... strip to 100 characters or something?
-		$reply = join('', substr($reply, 0, 100), '...');
+		$reply = _vimeo($1);
 	}
 
 	# Someone is trying to substitute (correct) his previous sentence.
@@ -192,73 +138,13 @@ sub command
 	elsif (($target eq "#inter-actief" || $target eq "#testchan") and
 		   $msg =~ m/^s([\/|#.:;])(.*?)\1(.*?)\1?([gi]*)$/)
 	{
-		$pattern = $2;
-		$replace = $3;
-		$flags = $4;
-
-		#$substWindow = Irssi::window_find_item("#inter-actief");
-		$substWindow = Irssi::window_find_item($target);
-		my $lines = $substWindow->view()->get_lines();
-
-		# Bah... there seems to be no other way way to search from the back.
-		# Irssi::TextUI::TextBufferView has {startline} and {bottom_startline}
-		# but they all reference the first line.
-		# 
-		# Now we first have to iterate through all the lines in the text buffer
-		# before searching backwards.
-
-		$lines = $lines->next() while defined $lines->next();
-
-		# If I try it this way... $1 is not getting the right value :-(
-		# Search for the last line $nick said.
-		# while (defined $lines and not
-		#	$lines->get_text(0) =~ m/\d\d:\d\d <[\s\@\+]$nick> (.*)$/)
-		# {
-		#	$lines = $lines->prev();
-		# }
-
-		while (defined $lines)
-		{
-			# \Q..\E should be safe...
-			if ($lines->get_text(0) =~ m/\d\d:\d\d ( \* (\S+)|<[\s\@\+\&](.+)>) (.*\Q$pattern\E.*)$/)
-			{
-				# Returns the variable that is defined.
-				$corrNick = $2 // $3;
-				$original = $4;
-
-				last;
-			}
-
-			$lines = $lines->prev();
-		}
-
-		# If $lines is not defined now, it means the pattern didn't match.
-		if (defined $lines)
-		{
-			$substitution = substitute($pattern, $replace, $flags, $original);
-
-			if ($substitution)
-			{
-				if ($corrNick eq $nick)
-				{
-					$reply = $nick." bedoelde: ".$substitution;
-				}
-				else
-				{
-					$reply = $nick." verbeterde ".$corrNick.": ".$substitution;
-				}
-			}
-			else
-			{
-				$reply = sprintf('%s %s, %s, dat vervangt toch helemaal niks!',
-								 aanhef(), $nick, scheldwoord());
-			}
-		}
+		$reply = _sed($2, $3, $4, $nick, $target);
 	}
 
 	# Send the reply to the target (channel/nick), if it exists.
 	if ($reply)
 	{
+		my $part;
 		foreach $part (split(/\\n/, $reply))
 		{
 			# Ugly way to sleep half a second
@@ -267,6 +153,198 @@ sub command
 			$server->command('wait 50');
 		}
 	}
+}
+
+sub _command
+{
+	my ($server, $msg, $nick, $address, $target, $mynick) = @_;
+
+	my ($cmd, $params, $cmdref);
+	my $reply = '';
+
+	# Strip the prefix.
+	$msg =~ s/$mynick:\s*//i;
+	# Parse the line into the command and parameters.
+	($cmd, $params) = split(/\s+/, $msg, 2);
+
+	# Don't execute 'internal' subroutines.
+	if (index($cmd, '_') == 0)
+	{
+		print 'Internal!';
+		return '';
+	}
+
+	# $reply = Irssi::Script::botsma->$cmd($server, $params, $nick,
+	# $address, $target); would cause 'Irssi::Script::botsma to be
+	# the first argument to $cmd...  The following bypasses that by
+	# making use of the can() UNIVERSAL function.
+	eval
+	{
+		# Use the subroutine with name $cmd from either our own package
+		# or from Botsma::Common.
+		if ($cmdref = __PACKAGE__->can($cmd) or
+			$cmdref = Botsma::Common->can($cmd))
+		{
+			$reply = $cmdref->($server, $params, $nick, $address, $target);
+		}
+		# Ehm... &($cmd) works too?
+	};
+	if ($@)
+	{
+		#warn $@;
+		# Could be other errors though...
+		# $server->command('msg '.$target.' Dat commando moet Dutchy nog implementeren.');
+	}
+
+	return $reply;
+}
+
+# Look up the video title for a YouTube hash.
+#
+# Parameters:
+# $hash A string with a valid video hash.
+#
+# Returns:
+# A string with the video title, or the empty string on error.
+sub _youtube
+{
+	my ($hash) = @_;
+
+	my ($url, $decoded);
+	my $reply = '';
+
+	# We construct the URL manually based on the hash, because YouTube
+	# doesn't seem to like URLs with, for example,
+	# 'feature=player_embedded' in it. Ugh.
+	$url = get join('', 'http://www.youtube.com/oembed?url=',
+	                    'http://www.youtube.com/watch?v=', $hash,
+	                    '&format=json');
+	
+	# Ignore exceptions from JSON.
+	eval
+	{
+		$decoded = decode_json($url);
+		$reply = $decoded->{title};
+	};
+
+	return $reply;
+}
+
+# Look up the video title for a Vimeo hash.
+#
+# Parameters:
+# $hash A string with a valid video hash.
+#
+# Returns:
+# A string with the video title, or the empty string on error.
+sub _vimeo
+{
+	my ($hash) = @_;
+
+	my ($url, $decoded);
+	my $reply = '';
+
+	# Apperently Vimeo dislikes Perl's LWP... 
+	$ua->agent('Botsma');
+	$url = get join('', 'http://vimeo.com/api/oembed.json?url=',
+	                    'http://vimeo.com/', $hash);
+
+	# Ignore exceptions from JSON.
+	eval
+	{
+		$decoded = decode_json($url);
+		$reply = join(': ', $decoded->{title}, $decoded->{description});
+		# Description can be quite large... strip to 100 characters or
+		# something?
+		$reply = join('', substr($reply, 0, 100), '...');
+	};
+
+	return $reply;
+}
+
+
+# Provides a sed-like 'command' for people in some channels. For example, they
+# can type 's/old/new' to correct their previous sentence.
+#
+# Parameters:
+# $pattern A string with the search pattern.
+# $replace A string with the replacement text.
+# $flags Either 'i' for case insensitive search, or 'g' for global matching.
+# $nick The nickname that initiated this sed search.
+# $target The channel or query on which the substitution must be made.
+#
+# Returns:
+# A string describing $nick did a substitution or corrected some other nick's
+# sentence. This is followed by the substitution.
+# If no substitution could be made, return an error.
+# For undefined behaviour or other errors, the empty string is returned.
+sub _sed
+{
+	my ($pattern, $replace, $flags, $nick, $target) = @_;
+
+	my ($substWindow, $lines, $corrNick, $original, $substitution);
+	my $reply = '';
+
+	#$substWindow = Irssi::window_find_item("#inter-actief");
+	$substWindow = Irssi::window_find_item($target);
+	$lines = $substWindow->view()->get_lines();
+
+	# Bah... there seems to be no other way way to search from the back.
+	# Irssi::TextUI::TextBufferView has {startline} and {bottom_startline}
+	# but they all reference the first line.
+	# 
+	# Now we first have to iterate through all the lines in the text buffer
+	# before searching backwards.
+
+	$lines = $lines->next() while defined $lines->next();
+
+	# If I try it this way... $1 is not getting the right value :-(
+	# Search for the last line $nick said.
+	# while (defined $lines and not
+	#	$lines->get_text(0) =~ m/\d\d:\d\d <[\s\@\+]$nick> (.*)$/)
+	# {
+	#	$lines = $lines->prev();
+	# }
+
+	while (defined $lines)
+	{
+		# \Q..\E should be safe...
+		if ($lines->get_text(0) =~ m/\d\d:\d\d ( \* (\S+)|<[\s\@\+\&](.+)>) (.*\Q$pattern\E.*)$/)
+		{
+			# Returns the variable that is defined.
+			$corrNick = $2 // $3;
+			$original = $4;
+
+			last;
+		}
+
+		$lines = $lines->prev();
+	}
+
+	# If $lines is not defined now, it means the pattern didn't match.
+	if (defined $lines)
+	{
+		$substitution = substitute($pattern, $replace, $flags, $original);
+
+		if ($substitution)
+		{
+			if ($corrNick eq $nick)
+			{
+				$reply = $nick." bedoelde: ".$substitution;
+			}
+			else
+			{
+				$reply = $nick." verbeterde ".$corrNick.": ".$substitution;
+			}
+		}
+		else
+		{
+			$reply = sprintf('%s %s, %s, dat vervangt toch helemaal niks!',
+							 aanhef(), $nick, scheldwoord());
+		}
+	}
+
+	return $reply;
 }
 
 # Substitute a pattern in a string using the Perl substitute command.
@@ -283,7 +361,7 @@ sub command
 # Returns:
 # The substituted string if there was a match, or an empty string ('') if
 # there was no match.
-sub substitute
+sub _substitute
 {
 	my ($pattern, $replace, $flags, $reply) = @_;
 	my $result;
@@ -857,10 +935,10 @@ sub _checkPlace
 	}
 }
 
-signal_add("message public", "command");
-signal_add("message private", "owncommand");
-signal_add("message own_public", "owncommand");
-signal_add("message own_private", "owncommand");
+signal_add("message public", "_parse");
+signal_add("message private", "_parseown");
+signal_add("message own_public", "_parseown");
+signal_add("message own_private", "_parseown");
 
 # Every 2 minutes.
 timeout_add(120000, 'p2000', undef);
