@@ -324,7 +324,7 @@ sub _sed
 	# If $lines is not defined now, it means the pattern didn't match.
 	if (defined $lines)
 	{
-		$substitution = substitute($pattern, $replace, $flags, $original);
+		$substitution = _substitute($pattern, $replace, $flags, $original);
 
 		if ($substitution)
 		{
