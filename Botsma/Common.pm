@@ -552,11 +552,7 @@ sub zon
 {
 	my ($server, $params, $nick, $address, $target) = @_;
 
-	# TODO: FIX THIS NEATLY ETC. RAGE BOO
-	# WARNING TODO: THIS IS CODE REPLICATION
-	# WOOOT WOOOOOT WOOOOT ALARM RED ALERT RAPE
-
-	my ($coords, $lat, $lon, $today, $tomorrow);
+	my ($lat, $lon, $today, $tomorrow);
 
 	# Check whether a latitude and longitude were given. Must have at least
 	# a dot and one decimal after the dot.
@@ -564,25 +560,10 @@ sub zon
 	{
 		$lat = $1;
 		$lon = $2;
-		$params = 'Coördinaten';
 	}
-	# Should be a city...
 	else
 	{
-		if ($params eq '')
-		{
-			# Default city.
-			$params = 'Enschede';
-		}
-
-		$coords = citycoords($server, $params, $nick, $address, $target);
-
-		if ($coords eq 'Dat gehucht kan niet worden gevonden')
-		{
-			return $coords;
-		}
-
-		($lat, $lon) = split(/ /, $coords);
+		return 'Invalid GPS coordinates.';
 	}
 
 	$today = join(" ", sun_rise($lon, $lat), '(op)',
@@ -591,7 +572,6 @@ sub zon
 	                      sun_set($lon, $lat, undef, +1), '(onder)');
 
 	return join(" ", $today, 'Morgen:', $tomorrow);
-	
 }
 
 sub validcoords

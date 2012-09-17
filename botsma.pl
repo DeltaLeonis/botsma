@@ -643,13 +643,37 @@ sub bofh
 	return $excuse[rand(scalar(@excuse))];
 }
 
-# Simple wrapper around Botsma::Common::regen so we can look up the coordinates
-# of the supplied place. If no place is given as an argument, then use the
-# user's preference setting if it is available. If the user doesn't have a
-# preference, use the default 'Campus'.
-sub regen
+# Simple wrapper around Botsma::Common functions that accept coordinates. For
+# now, these are 'regen' and 'zon'.
+#
+# The wrapper exists so we can look up the coordinates of a supplied 'place'
+# first.  If no place is given as an argument, then use the user's preference
+# setting if it is available. If the user doesn't have a preference, use the
+# default 'Campus'.
+#
+# Parameters:
+# $server Ignored.
+# $params A string with either:
+#         A latitude and longitude, separated by a space.
+#         A 'point of interest' stored in the %locations hash.
+#         A Dutch city name.
+#         A different nickname which has stored a preference location.
+#         or...
+#         The empty string. When the nickname calling the wrapped function has
+#         a stored prefrence location, use it. Otherwise use the default
+#         location 'Campus'.
+# $nick Ignored.
+# $address Ignored.
+# $target Ignored.
+# $function A reference to the function being wrapped, currently either 'regen'
+#           or 'zon'.
+#
+# Returns:
+# The result of the wrapped function, augmented with some extra information
+# like a Google Maps URL.
+sub _wrapper
 {
-	my ($server, $params, $nick, $address, $target) = @_;
+	my ($server, $params, $nick, $address, $target, $function) = @_;
 
 	my ($coords, $regen, $maps, $lat, $lon, $check);
 
@@ -697,8 +721,8 @@ sub regen
 	$maps = join('', 'http://maps.google.com/maps?z=14&q=loc:',
 	                 $lat, '+', $lon);
 
-	return join('', Botsma::Common::regen($server, $coords, $nick,
-	                                      $address, $target),
+	return join('', $function->($server, $coords, $nick,
+	                            $address, $target),
 	                ' ', $params, ': ', $maps);
 }
 
@@ -933,6 +957,16 @@ sub _checkPlace
 		# Normal, valid coordinates.
 		return '';
 	}
+}
+
+sub zon
+{
+	return _wrapper(@_, \&Botsma::Common::zon);
+}
+
+sub regen
+{
+	return _wrapper(@_, \&Botsma::Common::regen);
 }
 
 signal_add("message public", "_parse");
