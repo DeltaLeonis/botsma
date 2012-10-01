@@ -518,7 +518,16 @@ sub temp
 	# supplied a nickname as an argument to this function.
 	my $prefix = '';
 
-	# Explicit parameters? Either a nickname, or directly pass it on...
+	# Weather station of the user. Set by a nearest neighbour search from
+	# the location setting, or directly from the weather station setting.
+	my $userStation;
+
+	# Temperature of the user's weather station, and the temperature of
+	# Twenthe.
+	my ($userTemp, $twenthe);
+
+	# Explicit parameters? They can either be a nickname or a place. If it is
+	# neither, directly pass it on to the function in Botsma::Common...
 	if ($params)
 	{
 		# Is it a nickname?
@@ -530,59 +539,70 @@ sub temp
 		}
 		else
 		{
+			my $coords = place($server, $params, $nick, $address, $target);
+
+			# Basically does the same as _checkPlace, but we want to take
+			# different actions for when a city wasn't found at all, or when
+			# multiple cities were found.
+			if ($coords eq '')
+			{
+				return Botsma::Common::temp(@_);
+			}
+			elsif (!Botsma::Common::validcoords($server, $coords, $nick,
+			                                    $address, $target))
+			{
+				return $coords;
+			}
+			else
+			{
+				$userStation = Botsma::WStations::nearest($coords);
+			}
+		}
+	}
+	# No explicit parameters.
+	else
+	{
+		# Some user explicitly stored a weather station preference.
+		if (defined $users{$nick}{wstation})
+		{
+			$userStation = $users{$nick}{wstation};
+		}
+		# Some user has a location set. We will automatically determine the
+		# nearest weather station, and show the difference with Twenthe (if
+		# it's not Twenthe itself...).
+		elsif (defined $users{$nick}{location})
+		{
+			# Replace $params with the user defined setting.
+			$params = $users{$nick}{location};
+
+			# Look up the coordinates of the given place. Return if the place
+			# couldn't be found, or if multiple cities are found.
+			my $coords = place($server, $params, $nick, $address, $target);
+
+			# Check whether we got something other than coordinates and return
+			# if this is the case. This should've been checked while saving the
+			# preference, but we'll be extra sure...
+			my $check;
+			if ($check = _checkPlace($server, $coords, $nick,
+									 $address, $target))
+			{
+				return $check;
+			}
+
+			$userStation = Botsma::WStations::nearest($coords);
+		}
+		# No weather station was supplied, and the user didn't have preference
+		# settings. Just call Botsma::Common::temp and get the temperature for
+		# the default weather station.
+		else
+		{
 			return Botsma::Common::temp(@_);
 		}
 	}
 
-	# Weather station of the user. Set by a nearest neighbour search from
-	# the location setting, or directly from the weather station setting.
-	my $userStation;
-
-	# Temperature of the user's weather station, and the temperature of
-	# Twenthe.
-	my ($userTemp, $twenthe);
-
-	# Some user explicitly stored a weather station preference.
-	if (defined $users{$nick}{wstation})
-	{
-		$userStation = $users{$nick}{wstation};
-	}
-	# Some user has a location set. We will automatically determine the
-	# nearest weather station, and show the difference with Twenthe (if
-	# it's not Twenthe itself...).
-	elsif (defined $users{$nick}{location})
-	{
-		# Coordinates of the user's location.
-		my $coords;
-
-		# Replace $params with the user defined setting.
-		$params = $users{$nick}{location};
-
-		# Look up the coordinates of the given place. Return if the place
-		# couldn't be found, or if multiple cities are found.
-		$coords = place($server, $params, $nick, $address, $target);
-
-		# Check whether we got something other than coordinates and return if
-		# this is the case. This should've been checked while saving the
-		# preference, but we'll be extra sure...
-		my $check;
-		if ($check = _checkPlace($server, $coords, $nick,
-		                         $address, $target))
-		{
-			return $check;
-		}
-
-		$userStation = Botsma::WStations::nearest($coords);
-	}
-	# No weather station was supplied, and the user didn't have preference
-	# settings. Just call Botsma::Common::temp and get the temperature for
-	# the default weather station.
-	else
-	{
-		return Botsma::Common::temp(@_);
-	}
-
-	# General section for when either location or wstation was set.
+	# General section for when either:
+	# - a nick, location or weather station was explicitly specified.
+	# - location or wstation was set.
 
 	$twenthe = Botsma::Common::temp($server, '', $nick,
 	                                $address, $target);
