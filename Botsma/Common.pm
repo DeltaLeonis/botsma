@@ -363,24 +363,25 @@ sub citycoords
 
 # Get an 'ASCII art' graph of the expected rain in a certain Dutch city.
 #
-# Actually, 8 different UTF-8 block symbols are used to make up the graph.
-# Every block represents 0.75 mm/h rain. If more than 6 mm/h is expected for a
-# certain period, colours will be added in the ranges 6-7 mm/h, 7-8 mm/h, 8-9
-# mm/h, 9-10 mm/h. For more than 10 mm/h, the colour will be red.
+# Actually, 8 different UTF-8 block symbols or ASCII text symbols are used to
+# make up the graph. Every block represents 0.75 mm/h rain. If more than 6 mm/h
+# is expected for a certain period, colours will be added in the ranges 6-7
+# mm/h, 7-8 mm/h, 8-9 mm/h, 9-10 mm/h. For more than 10 mm/h, the colour will
+# be red.
 #
-# Every UTF-8 block
-# symbol has a time span of 5 minutes; a vertical bar is set at every 30
-# minutes.
+# Every graph symbol has a time span of 5 minutes; a vertical bar is set at
+# every 30 minutes.
 #
 # Parameters:
 # $server Ignored.
-# $params GPS coördinates like '52.219515 6.891235'.
+# $params GPS coördinates like '52.219515 6.891235'. If --ascii is part of the
+#         parameters, use ASCII symbols instead of UTF-8 symbols.
 # $nick Ignored.
 # $address Ignored.
 # $target Ignored.
 #
 # Returns:
-# UTF-8 'graph' of the rain prediction, or
+# Textual 'graph' of the rain prediction, or
 # An appropriate message if invalid GPS coordinates are supplied, or
 # A message that the website containing the predictions had connection
 # failures.
@@ -389,6 +390,14 @@ sub regen
 
 	my ($server, $params, $nick, $address, $target) = @_;
 	my @rainbox = ("▁", "▂", "▃", "▄", "▅", "▆", "▇", "█");
+	my @asciibox = ("_", ".", "-", "=", "+", "^", "`", "!");
+
+	# Use ASCII symbols/glyphs/characters instead of UTF-8 ones if --ascii is
+	# part of the parameter string.
+	if ($params =~ s/\s*--ascii\s*//g)
+	{
+		@rainbox = @asciibox;
+	}
 
 	my ($lat, $lon, $url);
 

@@ -62,6 +62,7 @@ my %settings =
 (
 	wstation => 'Twenthe',
 	location => 'Enschede',
+	regen => 'utf-8',
 );
 
 my %locations =
@@ -677,6 +678,15 @@ sub _wrapper
 
 	my ($coords, $regen, $maps, $lat, $lon, $check);
 
+	# Any options given? Strip them out for now.
+	my $options = '';
+	if ($params and $params =~ s/\s*(--\w+)\s*//g)
+	{
+		print "Params: ${params}";
+		print "Options: ${options}";
+		$options = $1;
+	}
+
 	# TODO: Is using 'defined $users{$nick}{location}' better?
 	if (!$params)
 	{
@@ -721,7 +731,7 @@ sub _wrapper
 	$maps = join('', 'http://maps.google.com/maps?z=14&q=loc:',
 	                 $lat, '+', $lon);
 
-	return join('', $function->($server, $coords, $nick,
+	return join('', $function->($server, $options . $coords, $nick,
 	                            $address, $target),
 	                ' ', $params, ': ', $maps);
 }
@@ -772,6 +782,15 @@ sub set
 				return $check;
 			}
 		}
+		elsif ($key eq 'regen')
+		{
+			unless (lc $value eq 'ascii' or
+				    lc $value eq 'utf-8')
+			{
+				return "De regen-setting verwacht 'ascii' of 'utf-8'.";
+			}
+		}
+
 
 		$users{$nick}{$key} = $value;
 		store \%users, '.irssi/scripts/users';
@@ -966,6 +985,13 @@ sub zon
 
 sub regen
 {
+	my ($server, $params, $nick, $address, $target) = @_;
+
+	if ($users{$nick}{regen} and lc $users{$nick}{regen} eq lc 'ascii')
+	{
+		# Add ascii option to the parameters.
+		$_[1] = join(' ', '--ascii', $_[1]);
+	}
 	return _wrapper(@_, \&Botsma::Common::regen);
 }
 
