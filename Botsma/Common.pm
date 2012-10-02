@@ -369,8 +369,8 @@ sub citycoords
 # mm/h, 7-8 mm/h, 8-9 mm/h, 9-10 mm/h. For more than 10 mm/h, the colour will
 # be red.
 #
-# Every graph symbol has a time span of 5 minutes; a vertical bar is set at
-# every 30 minutes.
+# Every graph symbol has a time span of 5 minutes; a vertical broken bar is set
+# at half hours, a normal vertical bar is set at full hours.
 #
 # Parameters:
 # $server Ignored.
@@ -419,24 +419,29 @@ sub regen
 
 	my $count = 0;
 	my $prediction = "";
-	my ($rain, $time, $mm, $bucket);
+	my ($rain, $time, $minutes, $mm, $bucket);
 
 	my @lines = split(/\n/, $url);
 	foreach my $line (@lines)
 	{
-		if ($line =~ m/(\d\d\d)\|(\d\d:\d\d)/)
+		if ($line =~ m/(\d\d\d)\|(\d\d:(\d\d))/)
 		{
 			# Range is 000-255
 			$rain = $1;
 			$time = $2;
+			$minutes = $3;
 
 			if ($count == 0)
 			{
-				$prediction = $time . " |";
+				$prediction = $time . ' [';
 			}
-			elsif ($count % 6 == 0)
+			elsif ($minutes eq '00')
 			{
-				$prediction .= "|";
+				$prediction .= '|';
+			}
+			elsif ($minutes eq '30')
+			{
+				$prediction .= '¦';
 			}
 
 			# The rain intensity takes values from 000 to 255. The rain in
@@ -499,7 +504,7 @@ sub regen
 		}
 	}
 
-	return $prediction;
+	return $prediction . ']';
 }
 
 # Return an excuse.
