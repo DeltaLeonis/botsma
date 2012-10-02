@@ -526,6 +526,10 @@ sub temp
 	# Twenthe.
 	my ($userTemp, $twenthe);
 
+	# Set to 1 if someone wants to look up the temperature of a different
+	# nickname.
+	my $nickSearch = 0;
+
 	# Explicit parameters? They can either be a nickname or a place. If it is
 	# neither, directly pass it on to the function in Botsma::Common...
 	if ($params)
@@ -534,6 +538,7 @@ sub temp
 		my $channel = $server->channel_find($target);
 		if ($channel and $channel->nick_find($params))
 		{
+			$nickSearch = 1;
 			$nick = $params;
 			$prefix = join('', $params, ': ');
 		}
@@ -559,8 +564,10 @@ sub temp
 			}
 		}
 	}
-	# No explicit parameters.
-	else
+
+	# Look up the preferences of ourself if no parameters were supplied to the
+	# temp function, or look up the preferences of a different nickname.
+	if (!$params or $nickSearch)
 	{
 		# Some user explicitly stored a weather station preference.
 		if (defined $users{$nick}{wstation})
@@ -616,12 +623,15 @@ sub temp
 	$userTemp = Botsma::Common::temp($server, $userStation, $nick,
 	                                 $address, $target);
 	
-	return 'Meetstation Twenthe is wat brakjes.'
-		unless $twenthe =~ s/ °C//;
-
 	return
 		join(' ', 'Meetstation', $userStation, 'bestaat niet of is stuk.')
 		unless $userTemp =~ s/ °C//;
+
+	return
+		join('', $prefix, $userTemp, ' °C (', $userStation, ')\n',
+		         'Kon de temperatuur niet vergelijken met Twenthe, ',
+		         'aangezien dat weerstation wat brakjes lijkt.')
+		unless $twenthe =~ s/ °C//;
 
 	# If we didn't return up until this point, we have two valid
 	# temperatures.
