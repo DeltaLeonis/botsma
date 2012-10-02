@@ -370,11 +370,6 @@ sub _substitute
 	# Better not to leave this to the caller function.
 	$pattern = quotemeta($pattern);
 
-	print join(' ', '$pattern =', $pattern);
-	print join(' ', '$replace =', $replace);
-	print join(' ', '$flags =', $flags);
-	print join(' ', '$reply =', $reply);
-
 	# This isn't pretty and doesn't look pretty, but I can't think of a
 	# better way at the moment. Extended patterns don't work for the 'g' flag.
 	eval
@@ -707,8 +702,6 @@ sub _wrapper
 	my $options = '';
 	if ($params and $params =~ s/\s*(--\w+)\s*//g)
 	{
-		print "Params: ${params}";
-		print "Options: ${options}";
 		$options = $1;
 	}
 
