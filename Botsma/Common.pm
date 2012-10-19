@@ -602,4 +602,31 @@ sub validcoords
 	}
 }
 
+# Return the weather prediction for the Netherlands.
+#
+# Only a short summary of the weather prediction is scraped from the KNMI
+# website:
+# http://www.knmi.nl/waarschuwingen_en_verwachtingen/
+#
+# Parameters:
+# None.
+#
+# Returns:
+# A string with the weather prediction, or a message that the website can't be
+# reached.
+sub weer
+{
+    my $url = get 'http://www.knmi.nl/waarschuwingen_en_verwachtingen/';
+
+    if ($url =~ m#<span class="alineakop">.*<br><br>\s*(.*)</span><br>#i)
+    {
+        return $1;
+    }
+    else
+    {
+        return 'De website van het KNMI is stuk, of veranderd. Naar de ' .
+		       'schuilkelders!';
+    }
+}
+
 1;
