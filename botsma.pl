@@ -165,6 +165,8 @@ sub _command
 
 	# Strip the prefix.
 	$msg =~ s/$mynick:\s*//i;
+	# Remove trailing whitespace.
+	$msg =~ s/\s+$//;
 	# Parse the line into the command and parameters.
 	($cmd, $params) = split(/\s+/, $msg, 2);
 
