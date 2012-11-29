@@ -131,6 +131,11 @@ sub _parse
 	{
 		$reply = _vimeo($1);
 	}
+	elsif (($target eq '#inter-actief' || $target eq "#testchan") and
+	       $msg =~ m#https?://.*imgur\.com/(a/|gallery/)?([A-Za-z0-9]+)#)
+	{
+		$reply = _imgur($1, $2);
+	}
 
 	# Someone is trying to substitute (correct) his previous sentence.
 	#
@@ -265,6 +270,44 @@ sub _vimeo
 	return $reply;
 }
 
+# Look up the title for a imgur link
+#
+# Parameters:
+# $a wether this is an album or image
+# $hash An image or album hash
+#
+# Returns:
+# A string with the image or album title, or the empty string on error.
+sub _imgur
+{
+	my ($a, $hash) = @_;
+
+	my ($url, $decoded);
+	my $reply = '';
+
+	# Apperently Vimeo dislikes Perl's LWP... 
+
+	if ($a eq 'a/')
+	{
+		$url = get join('', 'http://api.imgur.com/2/album/', $hash);
+	}
+	else
+	{
+		$url = get join('', 'http://api.imgur.com/2/image/', $hash);
+	}
+
+	# Ignore exceptions from JSON.
+	eval
+	{
+		$decoded = decode_json($url);
+		$reply = join(': ', $decoded->{title}, $decoded->{description});
+		# Description can be quite large... strip to 100 characters or
+		# something?
+		$reply = join('', substr($reply, 0, 100), '...');
+	};
+
+	return $reply;
+}
 
 # Provides a sed-like 'command' for people in some channels. For example, they
 # can type 's/old/new' to correct their previous sentence.
