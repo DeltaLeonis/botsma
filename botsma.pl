@@ -285,27 +285,30 @@ sub _imgur
 	my ($url, $decoded);
 	my $reply = '';
 
-	# Apperently Vimeo dislikes Perl's LWP... 
-
 	if ($a eq 'a/')
 	{
-		$url = get join('', 'http://api.imgur.com/2/album/', $hash);
+		$url = get join('', 'http://api.imgur.com/2/album/', $hash, '.json');
+		eval
+		{
+			$decoded = decode_json($url);
+			$reply = $decoded->{album}->{title};
+			my $description = $decoded->{album}->{description};
+			$reply = join(': ', $reply, $description) if $description;
+		}
 	}
 	else
 	{
-		$url = get join('', 'http://api.imgur.com/2/image/', $hash);
+		$url = get join('', 'http://api.imgur.com/2/image/', $hash, '.json');
+		eval
+		{
+			$decoded = decode_json($url);
+			$reply = $decoded->{image}->{image}->{title};
+			my $caption = $decoded->{image}->{image}->{caption};
+			$reply = join(': ', $reply, $caption) if $caption;
+		}
 	}
 
-	# Ignore exceptions from JSON.
-	eval
-	{
-		$decoded = decode_json($url);
-		$reply = join(': ', $decoded->{title}, $decoded->{description});
-		# Description can be quite large... strip to 100 characters or
-		# something?
-		$reply = join('', substr($reply, 0, 100), '...');
-	};
-
+	$reply = join('', substr($reply, 0, 100), '...') if length $reply > 100;
 	return $reply;
 }
 
