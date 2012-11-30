@@ -132,7 +132,7 @@ sub _parse
 		$reply = _vimeo($1);
 	}
 	elsif (($target eq '#inter-actief' || $target eq "#testchan") and
-	       $msg =~ m#https?://.*imgur\.com/(a/|gallery/)?([A-Za-z0-9]+)#)
+	       $msg =~ m#https?://.*imgur\.com/(a/|gallery/)?([A-Za-z0-9]+)(\..+)?#)
 	{
 		$reply = _imgur($1, $2);
 	}
