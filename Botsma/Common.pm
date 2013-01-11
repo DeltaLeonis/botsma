@@ -270,6 +270,44 @@ sub kies
 {
 	my ($server, $params, $nick, $address, $target) = @_;
 	my @words = quotewords('\s+', 0, $params);
+
+	my %beverages =
+	(
+		"bier" => 1,
+		"beer" => 1,
+		"pils" => 1,
+		"gerstenat" => 1,
+		"pretcylinder" => 1,
+		"wijn" => 1,
+		"koffie" => 1,
+		"ko-φ" => 1,
+		"koφ" => 1,
+		"thee" => 1,
+		"water" => 1,
+		"cola" => 1,
+		"sap" => 1,
+		"appelsap" => 1,
+		"sinaasappelsap" => 1,
+		"limonade" => 1
+	);
+
+	my $beverageFound = 0;
+
+	foreach my $word (@words)
+	{
+		# Only whisk(e)y is better than beer right.
+		if ($word =~ m/whiske?y/i)
+		{
+			return $word;
+		}
+		elsif ($beverages{lc $word})
+		{
+			$beverageFound = 1;
+		}
+	}
+
+	return "bier" if ($beverageFound);
+
 	return $words[rand($#words+1)];
 }
 
