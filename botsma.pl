@@ -52,8 +52,11 @@ else
 	print 'Kon de excuse-file niet openen. Ironisch!';
 }
 
-# Read users preferences from disk
+# Read users preferences from disk.
 my %users = %{retrieve('.irssi/scripts/users')};
+
+# Read the seen images and videos from disk.
+my %links = %{retrieve('.irssi/scripts/links')};
 
 # Possible user settings, with default values. Note that these default values
 # are actually implemented/harcoded in the subroutines, so they're just used
@@ -124,26 +127,17 @@ sub _parse
 	elsif (($target eq "#inter-actief" || $target eq '#testchan') and
 	       $msg =~ m#(https?://.*youtube.*/watch\?.*v=|https?://youtu\.be/)([A-Za-z0-9_\-]+)#)
 	{
-		if ($reply = _youtube($2))
-		{
-			$reply = join(' ', '[YouTube]', $reply);
-		}
+		$reply = _youtube($2);
 	}
 	elsif (($target eq '#inter-actief' || $target eq "#testchan") and
 	       $msg =~ m#https?://.*vimeo\.com/(\d+)#)
 	{
-		if ($reply = _vimeo($1))
-		{
-			$reply = join(' ', '[Vimeo]', $reply);
-		}
+		$reply = _vimeo($1);
 	}
 	elsif (($target eq '#inter-actief' || $target eq "#testchan") and
 	       $msg =~ m#https?://.*imgur\.com/(a/|gallery/)?([A-Za-z0-9]+)(\..+)?#)
 	{
-		if ($reply = _imgur($1, $2))
-		{
-			$reply = join(' ', '[Imgur]', $reply);
-		}
+		$reply = _imgur($1, $2);
 	}
 
 	# Someone is trying to substitute (correct) his previous sentence.
@@ -230,6 +224,12 @@ sub _youtube
 	my ($url, $decoded);
 	my $reply = '';
 
+	# Did we see this video before?
+	if (exists $links{'YouTube' . $hash})
+	{
+		return join('', 'Oud! (', $links{'YouTube' . $hash}, ')');
+	}
+
 	# We construct the URL manually based on the hash, because YouTube
 	# doesn't seem to like URLs with, for example,
 	# 'feature=player_embedded' in it. Ugh.
@@ -244,7 +244,15 @@ sub _youtube
 		$reply = $decoded->{title};
 	};
 
-	return $reply;
+	# Remember this hash so we can shout 'Oud!' when the video has been posted
+	# before.
+	$links{'YouTube' . $hash} = DateTime->now(time_zone => 'Europe/Amsterdam')->
+	                            strftime('%F %R');
+
+	if ($reply)
+	{
+		return join(' ', '[YouTube]', $reply);
+	}
 }
 
 # Look up the video title for a Vimeo hash.
@@ -261,7 +269,13 @@ sub _vimeo
 	my ($url, $decoded);
 	my $reply = '';
 
-	# Apperently Vimeo dislikes Perl's LWP... 
+	# Did we see this video before?
+	if (exists $links{'Vimeo' . $hash})
+	{
+		return join('', 'Oud! (', $links{'Vimeo' . $hash}, ')');
+	}
+
+	# Apparently Vimeo dislikes Perl's LWP... 
 	$ua->agent('Botsma');
 	$url = get join('', 'http://vimeo.com/api/oembed.json?url=',
 	                    'http://vimeo.com/', $hash);
@@ -276,7 +290,15 @@ sub _vimeo
 		$reply = join('', substr($reply, 0, 100), '...');
 	};
 
-	return $reply;
+	# Remember this hash so we can shout 'Oud!' when the video has been posted
+	# before.
+	$links{'Vimeo' . $hash} = DateTime->now(time_zone => 'Europe/Amsterdam')->
+	                          strftime('%F %R');
+
+	if ($reply)
+	{
+		return join(' ', '[Vimeo]', $reply);
+	}
 }
 
 # Look up the title for a imgur link
@@ -293,6 +315,12 @@ sub _imgur
 
 	my ($url, $decoded);
 	my $reply = '';
+
+	# Did we see this image before?
+	if (exists $links{'Imgur' . $hash})
+	{
+		return join('', 'Oud! (', $links{'Imgur' . $hash}, ')');
+	}
 
 	if ($a eq 'a/')
 	{
@@ -314,11 +342,19 @@ sub _imgur
 			$reply = $decoded->{image}->{image}->{title};
 			my $caption = $decoded->{image}->{image}->{caption};
 			$reply = join(': ', $reply, $caption) if $caption;
+			$reply = join('', substr($reply, 0, 100), '...') if length $reply > 100;
 		}
 	}
 
-	$reply = join('', substr($reply, 0, 100), '...') if length $reply > 100;
-	return $reply;
+	# Remember this hash so we can shout 'Oud!' when the image has been posted
+	# before.
+	$links{'Imgur' . $hash} = DateTime->now(time_zone => 'Europe/Amsterdam')->
+	                          strftime('%F %R');
+
+	if ($reply)
+	{
+		return join(' ', '[Imgur]', $reply);
+	}
 }
 
 # Provides a sed-like 'command' for people in some channels. For example, they
@@ -1080,6 +1116,12 @@ sub regen
 	return _wrapper(@_, \&Botsma::Common::regen);
 }
 
+# Store the %links hash to disk.
+sub storeLinks
+{
+	store \%links, '.irssi/scripts/links';
+}
+
 signal_add("message public", "_parse");
 signal_add("message private", "_parseown");
 signal_add("message own_public", "_parseown");
@@ -1087,3 +1129,5 @@ signal_add("message own_private", "_parseown");
 
 # Every 2 minutes.
 timeout_add(120000, 'p2000', undef);
+# Every 6 hours.
+timeout_add(21600000, 'storeLinks', undef);
