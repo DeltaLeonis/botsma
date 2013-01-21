@@ -124,17 +124,26 @@ sub _parse
 	elsif (($target eq "#inter-actief" || $target eq '#testchan') and
 	       $msg =~ m#(https?://.*youtube.*/watch\?.*v=|https?://youtu\.be/)([A-Za-z0-9_\-]+)#)
 	{
-		$reply = _youtube($2);
+		if ($reply = _youtube($2))
+		{
+			$reply = join(' ', '[YouTube]', $reply);
+		}
 	}
 	elsif (($target eq '#inter-actief' || $target eq "#testchan") and
 	       $msg =~ m#https?://.*vimeo\.com/(\d+)#)
 	{
-		$reply = _vimeo($1);
+		if ($reply = _vimeo($1))
+		{
+			$reply = join(' ', '[Vimeo]', $reply);
+		}
 	}
 	elsif (($target eq '#inter-actief' || $target eq "#testchan") and
 	       $msg =~ m#https?://.*imgur\.com/(a/|gallery/)?([A-Za-z0-9]+)(\..+)?#)
 	{
-		$reply = _imgur($1, $2);
+		if ($reply = _imgur($1, $2))
+		{
+			$reply = join(' ', '[Imgur]', $reply);
+		}
 	}
 
 	# Someone is trying to substitute (correct) his previous sentence.
