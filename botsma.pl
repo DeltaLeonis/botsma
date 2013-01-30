@@ -127,17 +127,17 @@ sub _parse
 	elsif (($target eq "#inter-actief" || $target eq '#testchan') and
 	       $msg =~ m#(https?://.*youtube.*/watch\?.*v=|https?://youtu\.be/)([A-Za-z0-9_\-]+)#)
 	{
-		$reply = _youtube($2);
+		$reply = _youtube($2, $nick);
 	}
 	elsif (($target eq '#inter-actief' || $target eq "#testchan") and
 	       $msg =~ m#https?://.*vimeo\.com/(\d+)#)
 	{
-		$reply = _vimeo($1);
+		$reply = _vimeo($1, $nick);
 	}
 	elsif (($target eq '#inter-actief' || $target eq "#testchan") and
 	       $msg =~ m#https?://.*imgur\.com/(a/|gallery/)?([A-Za-z0-9]+)(\..+)?#)
 	{
-		$reply = _imgur($1, $2);
+		$reply = _imgur($1, $2, $nick);
 	}
 
 	# Someone is trying to substitute (correct) his previous sentence.
@@ -214,12 +214,13 @@ sub _command
 #
 # Parameters:
 # $hash A string with a valid video hash.
+# $nick The nick who posted the video link.
 #
 # Returns:
 # A string with the video title, or the empty string on error.
 sub _youtube
 {
-	my ($hash) = @_;
+	my ($hash, $nick) = @_;
 
 	my ($url, $decoded);
 	my $reply = '';
@@ -246,8 +247,10 @@ sub _youtube
 
 	# Remember this hash so we can shout 'Oud!' when the video has been posted
 	# before.
-	$links{'YouTube' . $hash} = DateTime->now(time_zone => 'Europe/Amsterdam')->
-	                            strftime('%F %R');
+	my $now = DateTime->
+		now(time_zone => 'Europe/Amsterdam')->
+		strftime('%F %R');
+	$links{'YouTube' . $hash} = join(' op ', $nick, $now);
 
 	if ($reply)
 	{
@@ -259,12 +262,13 @@ sub _youtube
 #
 # Parameters:
 # $hash A string with a valid video hash.
+# $nick The nick who posted the video link.
 #
 # Returns:
 # A string with the video title, or the empty string on error.
 sub _vimeo
 {
-	my ($hash) = @_;
+	my ($hash, $nick) = @_;
 
 	my ($url, $decoded);
 	my $reply = '';
@@ -292,8 +296,10 @@ sub _vimeo
 
 	# Remember this hash so we can shout 'Oud!' when the video has been posted
 	# before.
-	$links{'Vimeo' . $hash} = DateTime->now(time_zone => 'Europe/Amsterdam')->
-	                          strftime('%F %R');
+	my $now = DateTime->
+		now(time_zone => 'Europe/Amsterdam')->
+		strftime('%F %R');
+	$links{'Vimeo' . $hash} = join(' op ', $nick, $now);
 
 	if ($reply)
 	{
@@ -304,14 +310,15 @@ sub _vimeo
 # Look up the title for a imgur link
 #
 # Parameters:
-# $a wether this is an album or image
-# $hash An image or album hash
+# $a Whether this is an album or image.
+# $hash An image or album hash.
+# $nick The nick who posted the image link.
 #
 # Returns:
 # A string with the image or album title, or the empty string on error.
 sub _imgur
 {
-	my ($a, $hash) = @_;
+	my ($a, $hash, $nick) = @_;
 
 	my ($url, $decoded);
 	my $reply = '';
@@ -348,8 +355,10 @@ sub _imgur
 
 	# Remember this hash so we can shout 'Oud!' when the image has been posted
 	# before.
-	$links{'Imgur' . $hash} = DateTime->now(time_zone => 'Europe/Amsterdam')->
-	                          strftime('%F %R');
+	my $now = DateTime->
+		now(time_zone => 'Europe/Amsterdam')->
+		strftime('%F %R');
+	$links{'Imgur' . $hash} = join(' op ', $nick, $now);
 
 	if ($reply)
 	{
