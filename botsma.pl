@@ -177,6 +177,8 @@ sub _command
 	$msg =~ s/\s+$//;
 	# Parse the line into the command and parameters.
 	($cmd, $params) = split(/\s+/, $msg, 2);
+	# Be case insensitive.
+	$cmd = lc $cmd;
 
 	# Don't execute 'internal' subroutines.
 	if (index($cmd, '_') == 0)
