@@ -139,7 +139,28 @@ sub _parse
 	{
 		$reply = _imgur($1, $2, $nick);
 	}
+	# Any URL.
+	# Modified regex from John Gruber:
+	# http://daringfireball.net/2009/11/liberal_regex_for_matching_urls
+	# This is far from perfect but should work in most cases.
+	elsif (($target eq '#inter-actief' || $target eq "#testchan") and
+	       $msg =~ m#\b(([\w-]+://?(www[.])?|www[.])([^\s()<>]+(?:\([\w\d]+\)|([^[:punct:]\s])))/?)#)
+	{
+		my $url = $4;
 
+		if (exists $links{$url})
+		{
+			$reply = join('', 'Oud! (', $links{$url}, ')');
+		}
+		else
+		{
+			my $now = DateTime->
+				now(time_zone => 'Europe/Amsterdam')->
+				strftime('%F %R');
+			print 'Saving URL ', $url;
+			$links{$url} = join(' op ', $nick, $now);
+		}
+	}
 	# Someone is trying to substitute (correct) his previous sentence.
 	#
 	# With optional last separator (but note that it gives problems with,
