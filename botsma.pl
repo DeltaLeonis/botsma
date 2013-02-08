@@ -4,7 +4,6 @@ use vars qw($VERSION %IRSSI);
 
 use Irssi qw(signal_add timeout_add);
 use Irssi::TextUI;
-use Irssi::Nick;
 
 use LWP::Simple qw(:DEFAULT $ua);
 
