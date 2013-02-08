@@ -43,7 +43,7 @@ my $lasttime = '';
 # Read the BOFH file into memory.
 my @excuse;
 
-if (open(F, '.irssi/scripts/excuses'))
+if (open(F, Irssi::get_irssi_dir . '/scripts/excuses'))
 {
 	@excuse = <F>;
 }
@@ -53,10 +53,10 @@ else
 }
 
 # Read users preferences from disk.
-my %users = %{retrieve('.irssi/scripts/users')};
+my %users = %{retrieve(Irssi::get_irssi_dir . '/scripts/users')};
 
 # Read the seen images and videos from disk.
-my %links = %{retrieve('.irssi/scripts/links')};
+my %links = %{retrieve(Irssi::get_irssi_dir . '/scripts/links')};
 
 # Possible user settings, with default values. Note that these default values
 # are actually implemented/harcoded in the subroutines, so they're just used
