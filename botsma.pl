@@ -4,6 +4,7 @@ use vars qw($VERSION %IRSSI);
 
 use Irssi qw(signal_add timeout_add);
 use Irssi::TextUI;
+use Irssi::Nick;
 
 use LWP::Simple qw(:DEFAULT $ua);
 
@@ -128,10 +129,6 @@ sub _parsePrivate
 sub _parsePublic
 {
 	my ($server, $msg, $nick, $address, $target) = @_;
-
-	print '$nick = ', $nick;
-	print '$target = ', $target;
-	print '$address = ', $address;
 
 	my $mynick;
 	my $reply = '';
@@ -681,7 +678,11 @@ sub temp
 	if ($params)
 	{
 		# Is it a nickname?
+		#
+		# This line always generates a warning.
+		# See http://bugs.irssi.org/index.php?do=details&task_id=242
 		my $channel = $server->channel_find($target);
+
 		if ($channel and $channel->nick_find($params))
 		{
 			$nickSearch = 1;
