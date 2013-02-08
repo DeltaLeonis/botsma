@@ -77,22 +77,40 @@ my %locations =
 	}
 );
 
-# A wrapper for when the commands are given in a private chat, or when 'I'
-# (this irssi user) issued the commands myself.
-# The order of parameters is different in that case.
-sub _parseown
+# Parse private messages (queries) the client/bot receives. If it's a bot
+# command, call the appropriate function. Otherwise do nothing.
+#
+# Parameters:
+# $server The server from which the message originated.
+# $msg The entire message.
+# $nick The nickname that typed the message.
+# $address User or server host? Ignored anyway.
+sub _parsePrivate
 {
-	my ($server, $msg, $nick, $address, $target) = @_;
-	# Not sure why we used '' for $nick here... try a while *with* $nick.
-	####command($server, $msg, '', $address, $nick);
+	my ($server, $msg, $nick, $address) = @_;
+	
+	my $reply = '';
 
-	# Nick also becomes target.
-	_parse($server, $msg, $nick, $address, $nick);
+	# Empty $target argument.
+	$reply = _command($server, $msg, $nick, $address, '');
+
+	# Send the (nonempty) reply to the target nick.
+	if ($reply)
+	{
+		my $part;
+		foreach $part (split(/\\n/, $reply))
+		{
+			# Ugly way to sleep half a second
+			# select(undef, undef, undef, 0.5);
+			$server->command('msg ' . $nick . ' ' . $part);
+			$server->command('wait 50');
+		}
+	}
 }
 
-# Parse messages the client/bot receives, and call the appropriate functions to
-# do something useful with them.  For example, if messages are prefixed by the
-# bot's name and a colon, like 'Zosma:', it means that someone requested a
+# Parse public messages the client/bot receives. Call the appropriate functions
+# to do something useful with them. For example, if messages are prefixed by
+# the bot's name and a colon, like 'Botsma:', it means that someone requested a
 # command.
 #
 # Messages containing YouTube or Vimeo links will announce the title, and
@@ -107,10 +125,13 @@ sub _parseown
 # $nick The nickname that typed the message.
 # $address User or server host? Ignored anyway.
 # $target The IRC channel or IRC query nickname.
-#
-sub _parse
+sub _parsePublic
 {
 	my ($server, $msg, $nick, $address, $target) = @_;
+
+	print '$nick = ', $nick;
+	print '$target = ', $target;
+	print '$address = ', $address;
 
 	my $mynick;
 	my $reply = '';
@@ -122,7 +143,9 @@ sub _parse
 
 	if ($msg =~ m/^$mynick:/i)
 	{
-		$reply = _command(@_, $mynick);
+		# Strip the prefix.
+		$msg =~ s/$mynick:\s*//i;
+		$reply = _command($server, $msg, $nick, $address, $target);
 	}
 	elsif (($target eq "#inter-actief" || $target eq '#testchan') and
 	       $msg =~ m#(https?://.*youtube.*/watch\?.*v=|https?://youtu\.be/)([A-Za-z0-9_\-]+)#)
@@ -192,8 +215,6 @@ sub _command
 	my ($cmd, $params, $cmdref);
 	my $reply = '';
 
-	# Strip the prefix.
-	$msg =~ s/$mynick:\s*//i;
 	# Remove trailing whitespace.
 	$msg =~ s/\s+$//;
 	# Parse the line into the command and parameters.
@@ -1154,10 +1175,8 @@ sub storeLinks
 	store \%links, '.irssi/scripts/links';
 }
 
-signal_add("message public", "_parse");
-signal_add("message private", "_parseown");
-signal_add("message own_public", "_parseown");
-signal_add("message own_private", "_parseown");
+signal_add("message public", "_parsePublic");
+signal_add("message private", "_parsePrivate");
 
 # Every 2 minutes.
 timeout_add(120000, 'p2000', undef);
