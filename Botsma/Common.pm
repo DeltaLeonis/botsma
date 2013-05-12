@@ -451,11 +451,16 @@ sub regen
 		return 'Invalid GPS coordinates.';
 	}
 
-	$url = get join('', 'http://gps.buienradar.nl/getrr.php?', 'lat=', $lat,
-	                    '&lon=', $lon)
-		or return "Buienradar lijkt stuk te zijn.";
-
+	# Try two times because of a broken buienradar.nl
 	my $count = 0;
+	do
+	{
+		$url = get join('', 'http://gps.buienradar.nl/getrr.php?', 'lat=', $lat,
+		                '&lon=', $lon);
+	} while (!($url) && $count < 2);
+	return "Buienradar lijkt stuk te zijn." if !($url);
+
+	$count = 0;
 	my $prediction = "";
 	my ($rain, $time, $minutes, $mm, $bucket);
 
