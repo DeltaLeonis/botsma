@@ -77,6 +77,13 @@ my %locations =
 	}
 );
 
+my %whatStatus =
+(
+	site => undef,
+	irc => undef,
+	tracker => undef,
+);
+
 # Parse private messages (queries) the client/bot receives. If it's a bot
 # command, call the appropriate function. Otherwise do nothing.
 #
@@ -1175,10 +1182,108 @@ sub storeLinks
 	store \%links, '.irssi/scripts/links';
 }
 
+# Check the status of what.cd's site, IRC and tracker by utilizing
+# whatstatus.info.
+#
+# Returns:
+# The statuses...
+sub what
+{
+	my ($server, $params, $nick, $address, $target) = @_;
+
+	my $url = get 'https://whatstatus.info/api/status' or
+		return 'Cannot reach whatstatus.info';
+
+
+	my ($decoded, $site, $irc, $tracker);
+
+	# Ignore exceptions from JSON.
+	eval
+	{
+		$decoded = decode_json($url);
+		$site = $decoded->{site};
+		$irc = $decoded->{irc};
+		$tracker = $decoded->{tracker};
+	};
+
+	return join(' ', '[Whatcd]',
+	                 'Site:', _colourStatus($site),
+	                 'IRC:', _colourStatus($irc),
+	                 'Tracker:', _colourStatus($tracker));
+}
+
+sub _colourStatus
+{
+	my $status = $_[0];
+
+	if ($status)
+	{
+		return chr(03).'03UP'.chr(03);
+	}
+	else
+	{
+		return chr(03).'04DOWN'.chr(03);
+	}
+}
+
+sub _whatChange
+{
+	my ($server, $params, $nick, $address, $target) = @_;
+
+	my $url = get 'https://whatstatus.info/api/status' or
+		return;
+
+	my ($decoded, @newstatus);
+
+	# Ignore exceptions from JSON.
+	eval
+	{
+		$decoded = decode_json($url);
+	};
+
+	my $component;
+
+	# All the values are only undefined at start. So, if one of the values is
+	# undefined, this is the first time we got called.
+	if (!(defined $whatStatus{site}))
+	{
+		foreach $component (qw(site irc tracker))
+		{
+			$whatStatus{$component} = $decoded->{$component};
+		}
+	}
+	else
+	{
+		my $isChanged = 0;
+
+		foreach $component (qw(site irc tracker))
+		{
+			# This fails if $decoded->{$component} doesn't exist...
+			if ($whatStatus{$component} != $decoded->{$component})
+			{
+				$isChanged = 1;
+				$whatStatus{$component} = $decoded->{$component};
+			}
+		}
+
+		if ($isChanged)
+		{
+			my $msg = join(' ', '[Whatcd] Status change!',
+	                 'Site:', _colourStatus($decoded->{site}),
+	                 'IRC:', _colourStatus($decoded->{irc}),
+	                 'Tracker:', _colourStatus($decoded->{tracker}));
+			$server = Irssi::server_find_tag('IRCnet');
+			$server->command('msg #inter-actief ' . $msg);
+		}
+	}
+}
+		
+
 signal_add("message public", "_parsePublic");
 signal_add("message private", "_parsePrivate");
 
 # Every 2 minutes.
 timeout_add(120000, 'p2000', undef);
+#timeout_add(120000, '_whatChange', undef);
 # Every 6 hours.
 timeout_add(21600000, 'storeLinks', undef);
