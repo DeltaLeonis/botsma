@@ -974,7 +974,7 @@ sub set
 
 
 		$users{$nick}{$key} = $value;
-		store \%users, '.irssi/scripts/users';
+		store \%users, Irssi::get_irssi_dir . '/scripts/users';
 		return join('', $key, ' is nu ', $value, '.');
 	}
 	else
@@ -1034,13 +1034,13 @@ sub delete
 	if (exists $users{$nick}{$params})
 	{
 		delete $users{$nick}{$params};
-		store \%users, '.irssi/scripts/users';
+		store \%users, Irssi::get_irssi_dir . '/scripts/users';
 		return join('', 'Voorkeur voor ', $params, ' gewist.');
 	}
 	elsif ($params eq 'all')
 	{
 		delete $users{$nick};
-		store \%users, '.irssi/scripts/users';
+		store \%users, Irssi::get_irssi_dir . '/scripts/users';
 		return 'Al je voorkeuren gewist.';
 	}
 	elsif ($params eq '')
@@ -1179,7 +1179,7 @@ sub regen
 # Store the %links hash to disk.
 sub storeLinks
 {
-	store \%links, '.irssi/scripts/links';
+	store \%links, Irssi::get_irssi_dir . '/scripts/links';
 }
 
 # Check the status of what.cd's site, IRC and tracker by utilizing
