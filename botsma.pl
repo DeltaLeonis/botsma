@@ -53,10 +53,16 @@ else
 }
 
 # Read users preferences from disk.
-my %users = %{retrieve(Irssi::get_irssi_dir . '/scripts/users')};
+my %users = ();
+if (-e Irssi::get_irssi_dir . '/scripts/users') {
+	%users = %{retrieve(Irssi::get_irssi_dir . '/scripts/users')};
+}
 
 # Read the seen images and videos from disk.
-my %links = %{retrieve(Irssi::get_irssi_dir . '/scripts/links')};
+my %links = ();
+if (-e Irssi::get_irssi_dir . '/scripts/links') {
+	%links = %{retrieve(Irssi::get_irssi_dir . '/scripts/links')};
+}
 
 # Possible user settings, with default values. Note that these default values
 # are actually implemented/harcoded in the subroutines, so they're just used
@@ -974,7 +980,7 @@ sub set
 
 
 		$users{$nick}{$key} = $value;
-		store \%users, '.irssi/scripts/users';
+		store \%users, Irssi::get_irssi_dir . '/scripts/users';
 		return join('', $key, ' is nu ', $value, '.');
 	}
 	else
@@ -1034,13 +1040,13 @@ sub delete
 	if (exists $users{$nick}{$params})
 	{
 		delete $users{$nick}{$params};
-		store \%users, '.irssi/scripts/users';
+		store \%users, Irssi::get_irssi_dir . '/scripts/users';
 		return join('', 'Voorkeur voor ', $params, ' gewist.');
 	}
 	elsif ($params eq 'all')
 	{
 		delete $users{$nick};
-		store \%users, '.irssi/scripts/users';
+		store \%users, Irssi::get_irssi_dir . '/scripts/users';
 		return 'Al je voorkeuren gewist.';
 	}
 	elsif ($params eq '')
@@ -1179,7 +1185,7 @@ sub regen
 # Store the %links hash to disk.
 sub storeLinks
 {
-	store \%links, '.irssi/scripts/links';
+	store \%links, Irssi::get_irssi_dir . '/scripts/links';
 }
 
 # Check the status of what.cd's site, IRC and tracker by utilizing
