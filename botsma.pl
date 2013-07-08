@@ -53,10 +53,16 @@ else
 }
 
 # Read users preferences from disk.
-my %users = %{retrieve(Irssi::get_irssi_dir . '/scripts/users')};
+my %users = ();
+if (-e Irssi::get_irssi_dir . '/scripts/users') {
+	%users = %{retrieve(Irssi::get_irssi_dir . '/scripts/users')};
+}
 
 # Read the seen images and videos from disk.
-my %links = %{retrieve(Irssi::get_irssi_dir . '/scripts/links')};
+my %links = ();
+if (-e Irssi::get_irssi_dir . '/scripts/links') {
+	%links = %{retrieve(Irssi::get_irssi_dir . '/scripts/links')};
+}
 
 # Possible user settings, with default values. Note that these default values
 # are actually implemented/harcoded in the subroutines, so they're just used
