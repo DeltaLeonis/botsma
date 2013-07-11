@@ -382,7 +382,7 @@ sub _imgur
 		return join('', 'Oud! (', $links{'Imgur' . $hash}, ')');
 	}
 
-	if ($a eq 'a/')
+	if (defined $a && $a eq 'a/')
 	{
 		$url = get join('', 'http://api.imgur.com/2/album/', $hash, '.json');
 		eval
@@ -400,6 +400,7 @@ sub _imgur
 		{
 			$decoded = decode_json($url);
 			$reply = $decoded->{image}->{image}->{title};
+			if (not defined $reply) { $reply = ''; }
 			my $caption = $decoded->{image}->{image}->{caption};
 			$reply = join(': ', $reply, $caption) if $caption;
 			$reply = join('', substr($reply, 0, 100), '...') if length $reply > 100;
