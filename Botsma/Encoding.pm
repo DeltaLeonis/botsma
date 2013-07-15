@@ -5,11 +5,18 @@ use utf8;
 
 my %encode = ();
 
+sub encoding_exists
+{
+	my ($code) = @_;
+
+	return ($code ne '' and defined($encode{$code}));
+}
+
 sub encode
 {
 	my ($code, $reply) = @_;
 
-	if ($code ne '' and defined($encode{$code}) )
+	if (encoding_exists($code))
 	{
 		$reply = $encode{$code}( $reply );
 	}
