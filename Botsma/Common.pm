@@ -661,7 +661,7 @@ sub weer
 {
     my $url = get 'http://www.knmi.nl/waarschuwingen_en_verwachtingen/';
 
-    if ($url =~ m#<span class="alineakop">.*<br><br>\s*.*</span><br>\s*(.*)<br>#i)
+    if ($url =~ m#Vandaag en morgen</span><p>\s*<i>(.*)</i>#i)
     {
         return $1;
     }
