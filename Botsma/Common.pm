@@ -79,7 +79,7 @@ sub temp
 	{
 		if ($1)
 		{
-			return $1.' °C';
+			return _colourTemp($1).' °C';
 		}
 		else
 		{
@@ -95,6 +95,45 @@ sub temp
 		               'meetstation op http://www.knmi.nl/actueel/',
 					   aanhef(), $nick, scheldwoord());
 	}
+}
+
+# Colourize a temperature value. Specific ranges of values have their own
+# colour.
+#
+# Parameters:
+# $temp The temperature in degrees Celsius
+#
+# Returns:
+# A coloured version of the temperature indication.
+sub _colourTemp
+{
+	my $temp = $_[0];
+
+	switch($temp)
+	{
+		case { $_[0] < 0 }
+		{
+			$temp = join('', chr(03), '11', $temp, chr(03));
+		}
+		case { $_[0] >= 0 and $_[0] < 5 }
+		{
+			$temp = join('', chr(03), '10', $temp, chr(03));
+		}
+		case { $_[0] >= 20 and $_[0] < 25 }
+		{
+			$temp = join('', chr(03), '08', $temp, chr(03));
+		}
+		case { $_[0] >= 25 and $_[0] < 30 }
+		{
+			$temp = join('', chr(03), '07', $temp, chr(03));
+		}
+		case { $_[0] >= 30 }
+		{
+			$temp = join('', chr(03), '04', $temp, chr(03));
+		}
+	}
+
+	return $temp;
 }
 
 # Report the scores of today's football (soccer!) matches.
