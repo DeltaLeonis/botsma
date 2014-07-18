@@ -79,7 +79,7 @@ sub temp
 	{
 		if ($1)
 		{
-			return _colourTemp($1).' °C';
+			return $1.' °C';
 		}
 		else
 		{
@@ -105,7 +105,7 @@ sub temp
 #
 # Returns:
 # A coloured version of the temperature indication.
-sub _colourTemp
+sub colourTemp
 {
 	my $temp = $_[0];
 
