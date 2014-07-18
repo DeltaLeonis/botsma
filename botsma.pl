@@ -697,7 +697,7 @@ sub temp
 
 	# Temperature of the user's weather station, and the temperature of
 	# Twenthe.
-	my ($userTemp, $twenthe);
+	my ($userTemp, $twenthe, $userTempColour, $twentheColour);
 
 	# Set to 1 if someone wants to look up the temperature of a different
 	# nickname.
@@ -780,7 +780,9 @@ sub temp
 		# the default weather station.
 		else
 		{
-			return Botsma::Common::temp(@_);
+			$userTemp = Botsma::Common::temp(@_);
+			$userTempColour = Botsma::Common::colourTemp($userTemp);
+			return $userTempColour;
 		}
 	}
 
@@ -790,22 +792,24 @@ sub temp
 
 	$twenthe = Botsma::Common::temp($server, '', $nick,
 	                                $address, $target);
+	$twentheColour = Botsma::Common::colourTemp($twenthe);
 
 	# Return the default Twenthe temperature, because the nearest
 	# weather station turned out to be Twenthe.
-	return join('', $prefix, $twenthe) if ($userStation eq 'Twenthe');
+	return join('', $prefix, $twentheColour) if ($userStation eq 'Twenthe');
 
 	# Otherwise continue and show the difference between the weather
 	# station of the user and Twenthe.
 	$userTemp = Botsma::Common::temp($server, $userStation, $nick,
 	                                 $address, $target);
+	$userTempColour = Botsma::Common::colourTemp($userTemp);
 	
 	return
 		join(' ', 'Meetstation', $userStation, 'bestaat niet of is stuk.')
 		unless $userTemp =~ s/ °C//;
 
 	return
-		join('', $prefix, $userTemp, ' °C (', $userStation, ')\n',
+		join('', $prefix, $userTempColour, ' °C (', $userStation, ')\n',
 		         'Kon de temperatuur niet vergelijken met Twenthe, ',
 		         'aangezien dat weerstation wat brakjes lijkt.')
 		unless $twenthe =~ s/ °C//;
@@ -830,8 +834,8 @@ sub temp
 		$warmth = 'even warm als';
 	}
 
-	return join('', $prefix, $userStation, ' (', $userTemp, ' °C) is ',
-	                $warmth, ' Twenthe (', $twenthe, ' °C)');
+	return join('', $prefix, $userStation, ' (', $userTempColour, ' °C) is ',
+	                $warmth, ' Twenthe (', $twentheColour, ' °C)');
 }
 
 # Get a Bastard Operator From Hell excuse.
