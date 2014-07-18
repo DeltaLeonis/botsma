@@ -11,6 +11,7 @@ use DateTime::Format::Strptime;
 
 use Botsma::Common;
 use Botsma::WStations;
+use Botsma::Encoding;
 
 use Storable;
 
@@ -238,26 +239,42 @@ sub _command
 		return '';
 	}
 
-	# $reply = Irssi::Script::botsma->$cmd($server, $params, $nick,
-	# $address, $target); would cause 'Irssi::Script::botsma to be
-	# the first argument to $cmd...  The following bypasses that by
-	# making use of the can() UNIVERSAL function.
-	eval
+	if (Botsma::Encoding::encoding_exists($cmd))
 	{
-		# Use the subroutine with name $cmd from either our own package
-		# or from Botsma::Common.
-		if ($cmdref = __PACKAGE__->can($cmd) or
-			$cmdref = Botsma::Common->can($cmd))
+		$reply = _command($server, $params, $nick, $address, $target, $mynick);
+		if ($reply)
 		{
-			$reply = $cmdref->($server, $params, $nick, $address, $target);
+			$reply = Botsma::Encoding::encode($cmd, $reply);
 		}
-		# Ehm... &($cmd) works too?
-	};
-	if ($@)
+		else
+		{
+			# geen bestaand commando, gewoon hele regel encoden
+			$reply = Botsma::Encoding::encode($cmd, $params);
+		}
+	}
+	else
 	{
-		#warn $@;
-		# Could be other errors though...
-		# $server->command('msg '.$target.' Dat commando moet Dutchy nog implementeren.');
+		# $reply = Irssi::Script::botsma->$cmd($server, $params, $nick,
+		# $address, $target); would cause 'Irssi::Script::botsma to be
+		# the first argument to $cmd...  The following bypasses that by
+		# making use of the can() UNIVERSAL function.
+		eval
+		{
+			# Use the subroutine with name $cmd from either our own package
+			# or from Botsma::Common.
+			if ($cmdref = __PACKAGE__->can($cmd) or
+				$cmdref = Botsma::Common->can($cmd))
+			{
+				$reply = $cmdref->($server, $params, $nick, $address, $target);
+			}
+			# Ehm... &($cmd) works too?
+		};
+		if ($@)
+		{
+			#warn $@;
+			# Could be other errors though...
+			# $server->command('msg '.$target.' Dat commando moet Dutchy nog implementeren.');
+		}
 	}
 
 	return $reply;
