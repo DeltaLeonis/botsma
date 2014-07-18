@@ -792,24 +792,22 @@ sub temp
 
 	$twenthe = Botsma::Common::temp($server, '', $nick,
 	                                $address, $target);
-	$twentheColour = Botsma::Common::colourTemp($twenthe);
 
 	# Return the default Twenthe temperature, because the nearest
 	# weather station turned out to be Twenthe.
-	return join('', $prefix, $twentheColour) if ($userStation eq 'Twenthe');
+	return join('', $prefix, Botsma::Common::colourTemp($twenthe)) if ($userStation eq 'Twenthe');
 
 	# Otherwise continue and show the difference between the weather
 	# station of the user and Twenthe.
 	$userTemp = Botsma::Common::temp($server, $userStation, $nick,
 	                                 $address, $target);
-	$userTempColour = Botsma::Common::colourTemp($userTemp);
 	
 	return
 		join(' ', 'Meetstation', $userStation, 'bestaat niet of is stuk.')
 		unless $userTemp =~ s/ °C//;
 
 	return
-		join('', $prefix, $userTempColour, ' °C (', $userStation, ')\n',
+		join('', $prefix, Botsma::Common::colourTemp($userTemp), ' °C (', $userStation, ')\n',
 		         'Kon de temperatuur niet vergelijken met Twenthe, ',
 		         'aangezien dat weerstation wat brakjes lijkt.')
 		unless $twenthe =~ s/ °C//;
@@ -834,6 +832,9 @@ sub temp
 		$warmth = 'even warm als';
 	}
 
+	$twentheColour = Botsma::Common::colourTemp($twenthe);
+	$userTempColour = Botsma::Common::colourTemp($userTemp);
+	
 	return join('', $prefix, $userStation, ' (', $userTempColour, ' °C) is ',
 	                $warmth, ' Twenthe (', $twentheColour, ' °C)');
 }
