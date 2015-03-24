@@ -150,6 +150,10 @@ sub _parsePublic
 	# When the nick is empty, it's probably ourselves.
 	#### $nick = $mynick if ($nick eq '');
 
+	if ($nick eq "eugen-ia") {
+		return;
+	}
+
 	if ($msg =~ m/^$mynick:/i)
 	{
 		# Strip the prefix.
