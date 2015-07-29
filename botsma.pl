@@ -1311,6 +1311,10 @@ sub _whatChange
 	}
 }
 		
+sub source
+{
+	return "https://github.com/DeltaLeonis/botsma";
+}
 
 signal_add("message public", "_parsePublic");
 signal_add("message private", "_parsePrivate");
