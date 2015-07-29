@@ -11,6 +11,7 @@ use DateTime::Format::Strptime;
 
 use Botsma::Common;
 use Botsma::WStations;
+use Botsma::Encoding;
 
 use Storable;
 
@@ -238,26 +239,42 @@ sub _command
 		return '';
 	}
 
-	# $reply = Irssi::Script::botsma->$cmd($server, $params, $nick,
-	# $address, $target); would cause 'Irssi::Script::botsma to be
-	# the first argument to $cmd...  The following bypasses that by
-	# making use of the can() UNIVERSAL function.
-	eval
+	if (Botsma::Encoding::encoding_exists($cmd))
 	{
-		# Use the subroutine with name $cmd from either our own package
-		# or from Botsma::Common.
-		if ($cmdref = __PACKAGE__->can($cmd) or
-			$cmdref = Botsma::Common->can($cmd))
+		$reply = _command($server, $params, $nick, $address, $target, $mynick);
+		if ($reply)
 		{
-			$reply = $cmdref->($server, $params, $nick, $address, $target);
+			$reply = Botsma::Encoding::encode($cmd, $reply);
 		}
-		# Ehm... &($cmd) works too?
-	};
-	if ($@)
+		else
+		{
+			# geen bestaand commando, gewoon hele regel encoden
+			$reply = Botsma::Encoding::encode($cmd, $params);
+		}
+	}
+	else
 	{
-		#warn $@;
-		# Could be other errors though...
-		# $server->command('msg '.$target.' Dat commando moet Dutchy nog implementeren.');
+		# $reply = Irssi::Script::botsma->$cmd($server, $params, $nick,
+		# $address, $target); would cause 'Irssi::Script::botsma to be
+		# the first argument to $cmd...  The following bypasses that by
+		# making use of the can() UNIVERSAL function.
+		eval
+		{
+			# Use the subroutine with name $cmd from either our own package
+			# or from Botsma::Common.
+			if ($cmdref = __PACKAGE__->can($cmd) or
+				$cmdref = Botsma::Common->can($cmd))
+			{
+				$reply = $cmdref->($server, $params, $nick, $address, $target);
+			}
+			# Ehm... &($cmd) works too?
+		};
+		if ($@)
+		{
+			#warn $@;
+			# Could be other errors though...
+			# $server->command('msg '.$target.' Dat commando moet Dutchy nog implementeren.');
+		}
 	}
 
 	return $reply;
@@ -382,7 +399,7 @@ sub _imgur
 		return join('', 'Oud! (', $links{'Imgur' . $hash}, ')');
 	}
 
-	if ($a eq 'a/')
+	if (defined $a && $a eq 'a/')
 	{
 		$url = get join('', 'http://api.imgur.com/2/album/', $hash, '.json');
 		eval
@@ -400,6 +417,7 @@ sub _imgur
 		{
 			$decoded = decode_json($url);
 			$reply = $decoded->{image}->{image}->{title};
+			if (not defined $reply) { $reply = ''; }
 			my $caption = $decoded->{image}->{image}->{caption};
 			$reply = join(': ', $reply, $caption) if $caption;
 			$reply = join('', substr($reply, 0, 100), '...') if length $reply > 100;
@@ -679,7 +697,7 @@ sub temp
 
 	# Temperature of the user's weather station, and the temperature of
 	# Twenthe.
-	my ($userTemp, $twenthe);
+	my ($userTemp, $twenthe, $userTempColour, $twentheColour);
 
 	# Set to 1 if someone wants to look up the temperature of a different
 	# nickname.
@@ -762,7 +780,9 @@ sub temp
 		# the default weather station.
 		else
 		{
-			return Botsma::Common::temp(@_);
+			$userTemp = Botsma::Common::temp(@_);
+			$userTempColour = Botsma::Common::colourTemp($userTemp);
+			return $userTempColour;
 		}
 	}
 
@@ -775,7 +795,7 @@ sub temp
 
 	# Return the default Twenthe temperature, because the nearest
 	# weather station turned out to be Twenthe.
-	return join('', $prefix, $twenthe) if ($userStation eq 'Twenthe');
+	return join('', $prefix, Botsma::Common::colourTemp($twenthe)) if ($userStation eq 'Twenthe');
 
 	# Otherwise continue and show the difference between the weather
 	# station of the user and Twenthe.
@@ -787,7 +807,7 @@ sub temp
 		unless $userTemp =~ s/ °C//;
 
 	return
-		join('', $prefix, $userTemp, ' °C (', $userStation, ')\n',
+		join('', $prefix, Botsma::Common::colourTemp($userTemp), ' °C (', $userStation, ')\n',
 		         'Kon de temperatuur niet vergelijken met Twenthe, ',
 		         'aangezien dat weerstation wat brakjes lijkt.')
 		unless $twenthe =~ s/ °C//;
@@ -812,8 +832,11 @@ sub temp
 		$warmth = 'even warm als';
 	}
 
-	return join('', $prefix, $userStation, ' (', $userTemp, ' °C) is ',
-	                $warmth, ' Twenthe (', $twenthe, ' °C)');
+	$twentheColour = Botsma::Common::colourTemp($twenthe);
+	$userTempColour = Botsma::Common::colourTemp($userTemp);
+	
+	return join('', $prefix, $userStation, ' (', $userTempColour, ' °C) is ',
+	                $warmth, ' Twenthe (', $twentheColour, ' °C)');
 }
 
 # Get a Bastard Operator From Hell excuse.
