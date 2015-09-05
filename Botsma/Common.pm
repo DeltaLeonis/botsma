@@ -74,8 +74,8 @@ sub temp
 		$city = 'Twenthe';
 	}
 
-	my $url = get 'http://www.knmi.nl/actueel/index.html';
-	if ($url =~ m/<td>$city<\/td>\s*<td>.*<\/td>\s*<td align=right>(-?\d*\.\d)?/i)
+	my $url = get 'http://www.knmi.nl/nederland-nu/weer/waarnemingen';
+	if ($url =~ m#<td[^>]*>$city</td>\s*<td[^>]*>.*</td>\s*<td[^>]*>(-?\d*\.\d)?</td>#i)
 	{
 		if ($1)
 		{
@@ -769,9 +769,9 @@ sub validcoords
 # reached.
 sub weer
 {
-    my $url = get 'http://www.knmi.nl/waarschuwingen_en_verwachtingen/';
+	my $url = get 'http://www.knmi.nl/nederland-nu/weer/verwachtingen';
 
-    if ($url =~ m#Vandaag en morgen</span><p>\s*<i>(.*)</i>#i)
+    if ($url =~ m#<h2>Vandaag &amp; morgen</h2>\s*<p.*>(.*)</p>#i)
     {
         return $1;
     }
