@@ -70,7 +70,7 @@ if (-e Irssi::get_irssi_dir . '/scripts/links') {
 # informatively here.
 my %settings =
 (
-	wstation => 'Twenthe',
+	wstation => 'Twente',
 	location => 'Enschede',
 	regen => 'utf-8',
 );
@@ -683,8 +683,8 @@ sub p2000
 #         nickname.
 #
 # Returns:
-# Temperature of Twenthe or the supplied weather station or...
-# Temperature difference between a users' preferred weather station and Twenthe
+# Temperature of Twente or the supplied weather station or...
+# Temperature difference between a users' preferred weather station and Twente
 # or...
 # An error message.
 sub temp
@@ -700,7 +700,7 @@ sub temp
 	my $userStation;
 
 	# Temperature of the user's weather station, and the temperature of
-	# Twenthe.
+	# Twente.
 	my ($userTemp, $twenthe, $userTempColour, $twentheColour);
 
 	# Set to 1 if someone wants to look up the temperature of a different
@@ -756,8 +756,8 @@ sub temp
 			$userStation = $users{$nick}{wstation};
 		}
 		# Some user has a location set. We will automatically determine the
-		# nearest weather station, and show the difference with Twenthe (if
-		# it's not Twenthe itself...).
+		# nearest weather station, and show the difference with Twente (if
+		# it's not Twente itself...).
 		elsif (defined $users{$nick}{location})
 		{
 			# Replace $params with the user defined setting.
@@ -797,12 +797,12 @@ sub temp
 	$twenthe = Botsma::Common::temp($server, '', $nick,
 	                                $address, $target);
 
-	# Return the default Twenthe temperature, because the nearest
-	# weather station turned out to be Twenthe.
-	return join('', $prefix, Botsma::Common::colourTemp($twenthe)) if ($userStation eq 'Twenthe');
+	# Return the default Twente temperature, because the nearest
+	# weather station turned out to be Twente.
+	return join('', $prefix, Botsma::Common::colourTemp($twenthe)) if ($userStation eq 'Twente');
 
 	# Otherwise continue and show the difference between the weather
-	# station of the user and Twenthe.
+	# station of the user and Twente.
 	$userTemp = Botsma::Common::temp($server, $userStation, $nick,
 	                                 $address, $target);
 	
@@ -812,7 +812,7 @@ sub temp
 
 	return
 		join('', $prefix, Botsma::Common::colourTemp($userTemp), ' °C (', $userStation, ')\n',
-		         'Kon de temperatuur niet vergelijken met Twenthe, ',
+		         'Kon de temperatuur niet vergelijken met Twente, ',
 		         'aangezien dat weerstation wat brakjes lijkt.')
 		unless $twenthe =~ s/ °C//;
 
@@ -840,7 +840,7 @@ sub temp
 	$userTempColour = Botsma::Common::colourTemp($userTemp);
 	
 	return join('', $prefix, $userStation, ' (', $userTempColour, ' °C) is ',
-	                $warmth, ' Twenthe (', $twentheColour, ' °C)');
+	                $warmth, ' Twente (', $twentheColour, ' °C)');
 }
 
 # Get a Bastard Operator From Hell excuse.
