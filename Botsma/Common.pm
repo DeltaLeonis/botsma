@@ -55,7 +55,7 @@ my %revProvince =
 # $server Ignored.
 # $params The name of the weather station which can be found at
 #         http://www.knmi.nl/actueel/
-#         If no weather station name is supplied, use 'Twenthe' as a default.
+#         If no weather station name is supplied, use 'Twente' as a default.
 # $nick The nickname that called this command.
 # $address Ignored.
 # $target Also the nickname that called this command?
@@ -71,7 +71,7 @@ sub temp
 	$city = $params;
 	if (!$city)
 	{
-		$city = 'Twenthe';
+		$city = 'Twente';
 	}
 
 	my $url = get 'http://www.knmi.nl/nederland-nu/weer/waarnemingen';
@@ -567,7 +567,7 @@ sub regen
 	{
 		$url = get join('', 'http://gps.buienradar.nl/getrr.php?', 'lat=', $lat,
 		                '&lon=', $lon);
-	} while (!($url) && $count < 2);
+	} while (!($url) && $count++ < 2);
 	return "Buienradar lijkt stuk te zijn." if !($url);
 
 	$count = 0;
