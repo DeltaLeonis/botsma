@@ -942,7 +942,7 @@ sub _wrapper
 
 	# Google maps URL.
 	($lat, $lon) = split(/ /, $coords);
-	$maps = join('', 'http://maps.google.com/maps?z=14&q=loc:',
+	$maps = join('', 'https://maps.google.com/maps?z=14&q=loc:',
 	                 $lat, '+', $lon);
 
 	return join('', $function->($server, $options . $coords, $nick,
