@@ -567,7 +567,7 @@ sub regen
 	{
 		$url = get join('', 'http://gps.buienradar.nl/getrr.php?', 'lat=', $lat,
 		                '&lon=', $lon);
-	} while (!($url) && $count < 2);
+	} while (!($url) && $count++ < 2);
 	return "Buienradar lijkt stuk te zijn." if !($url);
 
 	$count = 0;
